@@ -1,0 +1,6 @@
+# ความลับ ห้ามขึ้น GitHub
+.jwt_secret
+.env
+
+# ไฟล์ที่ build ได้
+/petfinder
