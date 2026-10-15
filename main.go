@@ -15,7 +15,11 @@ import (
 
 func main() {
 	// เปิดฐานข้อมูล อ่านที่อยู่จากตัวแปรระบบ ไม่เขียนรหัสผ่านไว้ในโค้ด
-	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal(`ยังไม่ได้ตั้ง DATABASE_URL ลองสั่ง: export DATABASE_URL="postgres://postgres:secret@127.0.0.1:5432/petfinder"`)
+	}
+	pool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		log.Fatal(err)
 	}
