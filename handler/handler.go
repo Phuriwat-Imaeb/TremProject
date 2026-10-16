@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
+	"petfinder/auth"
 	"petfinder/store"
 )
 
-// Handler คือห้องรับใบสั่ง ถือห้องเก็บของไว้ใช้
+// Handler คือห้องรับใบสั่ง ถือห้องเก็บของ และเครื่องออกตั๋วไว้ใช้
 type Handler struct {
-	Store *store.Store
+	Store   *store.Store
+	Tickets *auth.Issuer
 }
 
 // writeJSON ตอบกลับเป็น JSON พร้อมเลขสถานะ
@@ -26,6 +28,16 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, map[string]any{
 		"error": map[string]string{"code": code, "message": message},
 	})
+}
+
+// readJSON อ่านกล่อง JSON จาก body ใส่ dst ถ้าอ่านไม่ออกจะตอบ 400 BAD_JSON ให้เลยแล้วคืน false
+func readJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // กันคนส่งกล่องใหญ่เกิน 1 MB มาถ่วงเซิร์ฟเวอร์
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_JSON", "อ่านกล่อง JSON ไม่ออก")
+		return false
+	}
+	return true
 }
 
 // internal จดรายละเอียดลง log ฝั่งเรา แต่บอกผู้ใช้แค่ว่าระบบขัดข้อง (ไม่โชว์ stack trace)
