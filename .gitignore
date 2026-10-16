@@ -2,5 +2,9 @@
 .jwt_secret
 .env
 
+# เอกสารประกอบการเรียน (ลิขสิทธิ์อาจารย์ BY-NC-ND) เก็บไว้ในเครื่องเท่านั้น
+/course-materials/
+
 # ไฟล์ที่ build ได้
 /petfinder
+/app

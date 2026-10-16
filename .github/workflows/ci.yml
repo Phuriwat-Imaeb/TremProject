@@ -1,0 +1,59 @@
+# ผู้ช่วยตรวจงานอัตโนมัติ: ทุกครั้งที่ push หรือเปิด PR จะ
+#   1) ตรวจว่าโค้ดจัดรูปแบบแล้ว (gofmt) และไม่มีจุดน่าสงสัย (go vet)
+#   2) build ผ่าน
+#   3) รัน schema.sql + seed.sql บน PostgreSQL 16 จริง ว่า SQL ไม่พัง
+#   4) รันเทสต์ทั้งหมด
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: petfinder
+        ports:
+          - 5432:5432
+        # รอให้ฐานข้อมูลพร้อมก่อนค่อยเริ่มขั้นตอนต่อไป
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:secret@127.0.0.1:5432/petfinder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "ไฟล์เหล่านี้ยังไม่ได้ gofmt:"; echo "$out"; exit 1; fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: build
+        run: go build -o /dev/null .
+
+      - name: schema + seed
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/schema.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/seed.sql
+
+      - name: test
+        run: go test ./...
