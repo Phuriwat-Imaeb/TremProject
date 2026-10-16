@@ -1,0 +1,14 @@
+// ช่องกรอกพร้อมป้ายชื่อ ใช้ร่วมกันในฟอร์ม Login / Register
+function Field({ label, hint, ...inputProps }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
+      <input
+        {...inputProps}
+        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+      />
+      {hint && <span className="mt-1 block text-xs text-gray-500">{hint}</span>}
+    </label>
+  );
+}
+export default Field;

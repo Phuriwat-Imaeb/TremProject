@@ -57,3 +57,29 @@ jobs:
 
       - name: test
         run: go test ./...
+
+  # หน้าเว็บ React: เทสต์ + build (CI=true ทำให้ warning ของ ESLint นับเป็น error ตอน build)
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: install
+        run: npm ci
+
+      - name: test
+        run: npm test -- --watchAll=false
+
+      - name: build
+        run: npm run build

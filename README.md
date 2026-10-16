@@ -1,6 +1,6 @@
 # TremProject
 
-API หลังบ้าน (Go + PostgreSQL) วิชา 520342 Server Side Web Programming
+API หลังบ้าน (Go + PostgreSQL) และหน้าเว็บ React ([web/](web)) วิชา 520342 Server Side Web Programming
 สัญญา API ทั้งหมดอยู่ใน [openapi.yaml](openapi.yaml)
 
 ## รันบนเครื่อง / Codespaces
@@ -22,6 +22,17 @@ export ALLOWED_ORIGINS=http://localhost:3000
 go run .
 ```
 
+หน้าเว็บ (อีกหน้าต่าง ต้องมี Node.js 18 ขึ้นไป):
+
+```bash
+cd web
+npm install
+npm start          # เปิด http://localhost:3000
+```
+
+ตอน `npm start` คำขอ `/api/*` จะถูกส่งต่อไปที่ Go ที่ `http://localhost:8080` ให้เอง ([web/src/setupProxy.js](web/src/setupProxy.js))
+ถ้า Go รันอยู่ที่อื่นให้ตั้ง `API_PROXY_TARGET` ส่วนตอน deploy ให้ตั้ง `REACT_APP_API_URL` (ดู [web/.env.example](web/.env.example))
+
 บัญชีทดสอบจาก `seed.sql` ใช้รหัสผ่าน `password123` ทุกบัญชี:
 `admin@petfinder.test` (admin), `rescue@petfinder.test` (rescuer),
 `nida@example.com` และ `ton@example.com` (member)
@@ -39,11 +50,17 @@ go run .
 
 ```bash
 go test ./...
+cd web && npm test
 ```
 
-GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต์ ให้ทุกครั้งที่ push ขึ้น `main`
+GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต์ของ Go กับเทสต์ + build ของหน้าเว็บ ให้ทุกครั้งที่ push ขึ้น `main`
 
 ## เส้นทางที่ทำแล้ว
 
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
 - `GET /api/species`, `GET /api/areas`
+
+## หน้าเว็บที่ทำแล้ว
+
+- `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
+- `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
