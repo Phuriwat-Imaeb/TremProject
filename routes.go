@@ -28,5 +28,8 @@ func routes(h *handler.Handler, tickets *auth.Issuer) *http.ServeMux {
 	mux.HandleFunc("GET /api/admin/articles/{id}", admin(h.AdminGetArticle))
 	mux.HandleFunc("PUT /api/admin/articles/{id}", admin(h.UpdateArticle))
 	mux.HandleFunc("DELETE /api/admin/articles/{id}", admin(h.DeleteArticle))
+
+	mux.HandleFunc("GET /api/admin/members", admin(h.AdminListMembers))
+	mux.HandleFunc("PUT /api/admin/members/{id}/role", admin(h.SetMemberRole))
 	return mux
 }

@@ -1,23 +1,12 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import * as api from './api/backend';
 import App from './App';
-import { AuthProvider } from './auth/AuthContext';
+import { admin, loginAs, nida, pageOf, renderWithProviders } from './test-utils';
 
 jest.mock('./api/backend');
 
-const nida = { id: 3, email: 'nida@example.com', displayName: 'นิดา', role: 'member' };
-
-function renderApp(path) {
-  render(
-    <MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </MemoryRouter>
-  );
-}
+const renderApp = (route) => renderWithProviders(<App />, { route });
 
 beforeEach(() => {
   localStorage.clear();
@@ -32,9 +21,7 @@ test('URL ที่ไม่มีอยู่ ต้องเจอหน้า
 });
 
 test('ตั๋วหมดอายุระหว่างใช้งาน ต้องพาไปหน้า login พร้อมบอกเหตุผล แล้ว login ใหม่กลับมาหน้าเดิม', async () => {
-  localStorage.setItem('petfinder.token', 'old');
-  localStorage.setItem('petfinder.member', JSON.stringify(nida));
-  api.getMe.mockReturnValue(new Promise(() => {})); // ไม่ให้มาแทรกจังหวะเทสต์
+  loginAs(nida, 'old');
   renderApp('/me');
   expect(screen.getByRole('heading', { name: 'บัญชีของฉัน' })).toBeInTheDocument();
 
@@ -66,4 +53,27 @@ test('เมนูมือถือ กดเปิดแล้วเห็น�
   api.listArticles.mockReturnValue(new Promise(() => {}));
   await userEvent.click(within(menu).getByRole('link', { name: 'บทความ' }));
   expect(document.getElementById('mobile-menu')).not.toBeInTheDocument();
+});
+
+test('ลิงก์หลังบ้านเห็นเฉพาะ admin', () => {
+  loginAs(nida);
+  const { unmount } = renderApp('/');
+  expect(screen.queryByRole('link', { name: 'หลังบ้าน' })).not.toBeInTheDocument();
+  unmount();
+
+  loginAs(admin);
+  renderApp('/');
+  expect(screen.getByRole('link', { name: 'หลังบ้าน' })).toHaveAttribute('href', '/admin');
+});
+
+test('เข้า /admin เฉย ๆ พาไปแท็บบทความ และสลับไปแท็บสมาชิกได้', async () => {
+  loginAs(admin);
+  api.adminListArticles.mockResolvedValue(pageOf([]));
+  api.adminListMembers.mockResolvedValue({ items: [admin, nida] });
+  renderApp('/admin');
+
+  expect(await screen.findByRole('heading', { name: 'จัดการบทความ' })).toBeInTheDocument();
+  const tabs = screen.getByRole('navigation', { name: 'เมนูหลังบ้าน' });
+  await act(async () => userEvent.click(within(tabs).getByRole('link', { name: 'สมาชิก' })));
+  expect(await screen.findByRole('heading', { name: 'จัดการสมาชิก' })).toBeInTheDocument();
 });

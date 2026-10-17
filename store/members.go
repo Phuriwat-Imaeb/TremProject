@@ -60,3 +60,37 @@ func (s *Store) MemberByID(ctx context.Context, id int64) (Member, error) {
 	}
 	return m, err
 }
+
+// ListMembers สมาชิกทั้งหมด เรียงตาม id (หน้าหลังบ้าน) ไม่ดึง hash
+func (s *Store) ListMembers(ctx context.Context) ([]Member, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, email, display_name, phone, role FROM members ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []Member{}
+	for rows.Next() {
+		var m Member
+		if err := rows.Scan(&m.ID, &m.Email, &m.DisplayName, &m.Phone, &m.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// SetMemberRole เปลี่ยนบทบาท แล้วคืนข้อมูลหลังเปลี่ยน ไม่มี id นี้ → ErrNotFound
+// (บทบาทที่ไม่อยู่ในรายการ handler กันไว้แล้ว และ CHECK ของตารางก็กันอีกชั้น)
+func (s *Store) SetMemberRole(ctx context.Context, id int64, role string) (Member, error) {
+	var m Member
+	err := s.Pool.QueryRow(ctx,
+		`UPDATE members SET role = $2 WHERE id = $1
+		 RETURNING id, email, display_name, phone, role`, id, role).
+		Scan(&m.ID, &m.Email, &m.DisplayName, &m.Phone, &m.Role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Member{}, ErrNotFound
+	}
+	return m, err
+}

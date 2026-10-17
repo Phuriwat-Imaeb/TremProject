@@ -1,7 +1,9 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminArticles from './pages/admin/AdminArticles';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminMembers from './pages/admin/AdminMembers';
 import ArticleForm from './pages/admin/ArticleForm';
 import ArticleDetail from './pages/ArticleDetail';
 import Articles from './pages/Articles';
@@ -30,30 +32,21 @@ function App() {
           />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:id" element={<ArticleDetail />} />
+          {/* หลังบ้าน: ด่าน admin ครอบทั้งกลุ่มที่เดียว หน้าย่อยไปแสดงใน <Outlet /> ของ AdminLayout */}
           <Route
-            path="/admin/articles"
+            path="/admin"
             element={
               <ProtectedRoute roles={['admin']}>
-                <AdminArticles />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/admin/articles/new"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <ArticleForm />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/articles/:id/edit"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <ArticleForm />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<Navigate to="articles" replace />} />
+            <Route path="articles" element={<AdminArticles />} />
+            <Route path="articles/new" element={<ArticleForm />} />
+            <Route path="articles/:id/edit" element={<ArticleForm />} />
+            <Route path="members" element={<AdminMembers />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

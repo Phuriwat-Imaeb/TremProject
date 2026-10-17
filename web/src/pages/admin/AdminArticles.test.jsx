@@ -1,52 +1,29 @@
-import { render, screen, waitForElementToBeRemoved, within } from '@testing-library/react';
+import { screen, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import * as api from '../../api/backend';
-import { AuthProvider } from '../../auth/AuthContext';
+import { admin, article, loginAs, pageOf, renderWithProviders } from '../../test-utils';
 import AdminArticles from './AdminArticles';
 
 jest.mock('../../api/backend');
 
-const article = (id, title, published) => ({
-  id,
-  title,
-  published,
-  body: '...',
-  coverUrl: null,
-  author: { id: 1, displayName: 'แอดมิน', phone: null },
-  createdAt: '2026-10-10T09:00:00+07:00',
-  updatedAt: '2026-10-10T09:00:00+07:00',
-});
-
 beforeEach(() => {
   localStorage.clear();
   jest.resetAllMocks();
-  localStorage.setItem('petfinder.token', 'tok');
-  localStorage.setItem('petfinder.member', JSON.stringify({ id: 1, displayName: 'แอดมิน', role: 'admin' }));
-  api.getMe.mockReturnValue(new Promise(() => {}));
-  api.adminListArticles.mockResolvedValue({ items: [article(1, 'เรื่องแรก', true), article(2, 'ร่างที่สอง', false)] });
+  loginAs(admin);
+  api.adminListArticles.mockResolvedValue(pageOf([article(1, 'เรื่องแรก'), article(2, 'ร่างที่สอง', false)]));
 });
 
-function renderPage() {
-  render(
-    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        <AdminArticles />
-      </AuthProvider>
-    </MemoryRouter>
-  );
-}
-
 test('โชว์ทั้งที่เผยแพร่และฉบับร่าง', async () => {
-  renderPage();
+  renderWithProviders(<AdminArticles />);
   expect(screen.getByRole('status')).toHaveTextContent('กำลังโหลด');
   expect(await screen.findByText('เรื่องแรก')).toBeInTheDocument();
   expect(screen.getByText('ฉบับร่าง')).toBeInTheDocument();
+  expect(api.adminListArticles).toHaveBeenCalledWith({ q: '', page: 1 }, 'tok');
 });
 
-test('กดลบ ต้องถามก่อน ยกเลิกแล้วไม่ลบ ยืนยันแล้วหายจากตาราง', async () => {
+test('กดลบ ต้องถามก่อน ยกเลิกแล้วไม่ลบ ยืนยันแล้วหายจากตารางพร้อมข้อความสำเร็จ', async () => {
   api.deleteArticle.mockResolvedValue(null);
-  renderPage();
+  renderWithProviders(<AdminArticles />);
   const row = (await screen.findByText('ร่างที่สอง')).closest('li');
 
   await userEvent.click(within(row).getByRole('button', { name: 'ลบ' }));
@@ -62,13 +39,24 @@ test('กดลบ ต้องถามก่อน ยกเลิกแล้
 
   await waitForElementToBeRemoved(() => screen.queryByText('ร่างที่สอง'));
   expect(api.deleteArticle).toHaveBeenCalledWith(2, 'tok');
-  expect(screen.getByText('เรื่องแรก')).toBeInTheDocument();
+  expect(screen.getByText('ลบ "ร่างที่สอง" แล้ว')).toBeInTheDocument();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
+test('ลบไม่สำเร็จ แถวยังอยู่ และบอกข้อความจาก server', async () => {
+  api.deleteArticle.mockRejectedValue(new Error('ไม่พบรายการนี้'));
+  renderWithProviders(<AdminArticles />);
+  const row = (await screen.findByText('เรื่องแรก')).closest('li');
+  await userEvent.click(within(row).getByRole('button', { name: 'ลบ' }));
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ลบ' }));
+
+  expect(await screen.findByText('ไม่พบรายการนี้')).toBeInTheDocument();
+  expect(screen.getByText('เรื่องแรก')).toBeInTheDocument();
+});
+
 test('ไม่มีบทความเลย โชว์ข้อความว่างพร้อมปุ่มเขียนใหม่', async () => {
-  api.adminListArticles.mockResolvedValue({ items: [] });
-  renderPage();
+  api.adminListArticles.mockResolvedValue(pageOf([]));
+  renderWithProviders(<AdminArticles />);
   expect(await screen.findByText('ยังไม่มีบทความ')).toBeInTheDocument();
   expect(screen.getAllByRole('link', { name: 'เขียนบทความใหม่' })).toHaveLength(2);
 });

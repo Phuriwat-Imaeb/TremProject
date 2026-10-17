@@ -1,22 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import * as api from '../../api/backend';
-import { AuthProvider } from '../../auth/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import { admin, loginAs, nida, renderWithProviders } from '../../test-utils';
 import ArticleForm from './ArticleForm';
 
 jest.mock('../../api/backend');
-
-const admin = { id: 1, email: 'admin@petfinder.test', displayName: 'แอดมิน', role: 'admin' };
-
-// จำลองว่า login ไว้แล้ว: AuthProvider อ่าน token + member จาก localStorage ตอนเริ่ม
-// getMe ไม่ตอบเลย เพราะ member มีอยู่แล้ว และไม่ให้มา setState ตอนเทสต์ทำอย่างอื่นอยู่ (warning act)
-function loginAs(member) {
-  localStorage.setItem('petfinder.token', 'tok');
-  localStorage.setItem('petfinder.member', JSON.stringify(member));
-  api.getMe.mockReturnValue(new Promise(() => {}));
-}
 
 function renderAt(path) {
   const guarded = (
@@ -24,16 +14,13 @@ function renderAt(path) {
       <ArticleForm />
     </ProtectedRoute>
   );
-  render(
-    <MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/admin/articles/new" element={guarded} />
-          <Route path="/admin/articles/:id/edit" element={guarded} />
-          <Route path="/admin/articles" element={<p>หน้ารายการหลังบ้าน</p>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>
+  renderWithProviders(
+    <Routes>
+      <Route path="/admin/articles/new" element={guarded} />
+      <Route path="/admin/articles/:id/edit" element={guarded} />
+      <Route path="/admin/articles" element={<p>หน้ารายการหลังบ้าน</p>} />
+    </Routes>,
+    { route: path }
   );
 }
 
@@ -42,7 +29,7 @@ beforeEach(() => {
   jest.resetAllMocks();
 });
 
-test('เขียนบทความใหม่ ส่งค่าที่กรอกไป server แล้วกลับไปหน้ารายการ', async () => {
+test('เขียนบทความใหม่ ส่งค่าที่กรอกไป server แล้วกลับไปหน้ารายการพร้อมข้อความสำเร็จ', async () => {
   loginAs(admin);
   api.createArticle.mockResolvedValue({ id: 9 });
 
@@ -53,6 +40,7 @@ test('เขียนบทความใหม่ ส่งค่าที่�
   await userEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
 
   expect(await screen.findByText('หน้ารายการหลังบ้าน')).toBeInTheDocument();
+  expect(screen.getByText('สร้างบทความแล้ว')).toBeInTheDocument();
   expect(api.createArticle).toHaveBeenCalledWith(
     { title: 'ข่าวใหม่', body: 'รายละเอียด', coverUrl: '', published: true },
     'tok'
@@ -77,8 +65,8 @@ test('แก้ไข โหลดของเดิมมาใส่ฟอร�
   );
 });
 
-test('member ธรรมดาเข้าหน้าหลังบ้านไม่ได้', async () => {
-  loginAs({ ...admin, id: 3, role: 'member' });
+test('member ธรรมดาเข้าหน้าหลังบ้านไม่ได้', () => {
+  loginAs(nida);
   renderAt('/admin/articles/new');
   expect(screen.getByText('บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้')).toBeInTheDocument();
   expect(screen.queryByLabelText('หัวข้อ')).not.toBeInTheDocument();

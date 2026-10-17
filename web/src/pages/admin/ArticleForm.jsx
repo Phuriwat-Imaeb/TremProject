@@ -6,6 +6,7 @@ import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 import Field from '../../components/Field';
 import Loading from '../../components/Loading';
+import { useToast } from '../../components/Toast';
 import useApi from '../../hooks/useApi';
 import usePageTitle from '../../hooks/usePageTitle';
 
@@ -33,6 +34,7 @@ function ArticleForm() {
 // ตัวฟอร์มจริง ได้ค่าตั้งต้นครบแล้วตั้งแต่ render แรก จึงไม่ต้องมี state "กำลังโหลด" ปนกับ state ของฟอร์ม
 function Editor({ id, initial, token }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState('typing'); // typing | submitting
   const [error, setError] = useState(null);
@@ -50,6 +52,7 @@ function Editor({ id, initial, token }) {
     try {
       if (id) await api.updateArticle(id, form, token);
       else await api.createArticle(form, token);
+      toast.success(id ? 'บันทึกการแก้ไขแล้ว' : 'สร้างบทความแล้ว');
       navigate('/admin/articles');
     } catch (err) {
       setError(err.message); // เช่น "หัวข้อต้องยาว 1-200 ตัวอักษร" จาก server

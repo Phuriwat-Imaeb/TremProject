@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -51,14 +52,40 @@ func scanArticle(row pgx.Row) (Article, error) {
 	return a, err
 }
 
-// ListArticles บทความใหม่สุดก่อน drafts = false คือหน้าบ้าน (เห็นแค่ที่เผยแพร่แล้ว)
-func (s *Store) ListArticles(ctx context.Context, drafts bool) ([]Article, error) {
+// ArticleFilter ตัวกรองหน้ารายการ handler ตรวจค่ามาแล้ว (Page เริ่มที่ 1)
+type ArticleFilter struct {
+	Drafts   bool   // false = หน้าบ้าน เห็นแค่ที่เผยแพร่แล้ว
+	Q        string // ค้นในหัวข้อหรือเนื้อหา ว่าง = ไม่กรอง
+	Page     int
+	PageSize int
+}
+
+// likePattern ครอบคำค้นเป็น %คำ% ให้ ILIKE หาแบบ "มีคำนี้อยู่ตรงไหนก็ได้"
+// ต้อง escape % _ \ ก่อน ไม่งั้นคนพิมพ์ "%" จะได้ทุกแถว
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+func likePattern(q string) string {
+	return "%" + likeEscaper.Replace(q) + "%"
+}
+
+// ListArticles บทความใหม่สุดก่อน ทีละหน้า คืนรายการของหน้านั้น + จำนวนทั้งหมดที่ตรงตัวกรอง (ไว้คำนวณจำนวนหน้า)
+func (s *Store) ListArticles(ctx context.Context, f ArticleFilter) ([]Article, int, error) {
+	// $1 = เห็นฉบับร่างไหม, $2 = คำค้น ('' = ไม่กรอง) ใช้เงื่อนไขชุดเดียวกันทั้งนับและดึง
+	const where = ` WHERE (a.published OR $1)
+		AND ($2 = '' OR a.title ILIKE $3 OR a.body ILIKE $3)`
+	args := []any{f.Drafts, f.Q, likePattern(f.Q)}
+
+	var total int
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*)`+articleFrom+where, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+articleCols+articleFrom+`
-		  WHERE a.published OR $1
-		  ORDER BY a.created_at DESC, a.id DESC`, drafts)
+		`SELECT `+articleCols+articleFrom+where+`
+		  ORDER BY a.created_at DESC, a.id DESC
+		  LIMIT $4 OFFSET $5`, append(args, f.PageSize, (f.Page-1)*f.PageSize)...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -66,11 +93,11 @@ func (s *Store) ListArticles(ctx context.Context, drafts bool) ([]Article, error
 	for rows.Next() {
 		a, err := scanArticle(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, a)
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 // ArticleByID หาบทความหนึ่งเรื่อง drafts = false แล้วเจอฉบับร่าง ถือว่าไม่เจอ (ErrNotFound)

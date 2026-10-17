@@ -7,7 +7,11 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import Loading from '../../components/Loading';
 import PageHeader from '../../components/PageHeader';
+import Pagination from '../../components/Pagination';
+import SearchBox from '../../components/SearchBox';
+import { useToast } from '../../components/Toast';
 import useApi from '../../hooks/useApi';
+import useListQuery from '../../hooks/useListQuery';
 import usePageTitle from '../../hooks/usePageTitle';
 import { thaiDate } from '../Articles';
 
@@ -15,21 +19,22 @@ import { thaiDate } from '../Articles';
 function AdminArticles() {
   usePageTitle('จัดการบทความ');
   const { token } = useAuth();
-  const { data, error, loading, setData } = useApi(() => api.adminListArticles(token), [token]);
+  const toast = useToast();
+  const { q, page, setQ } = useListQuery();
+  const { data, error, loading, setData } = useApi(() => api.adminListArticles({ q, page }, token), [q, page, token]);
 
   const [toDelete, setToDelete] = useState(null); // บทความที่กำลังถามยืนยันลบ null = กล่องปิด
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState(null);
 
   async function confirmDelete() {
     setDeleting(true);
-    setDeleteError(null);
     try {
       await api.deleteArticle(toDelete.id, token);
       // ลบออกจากตารางในมือเลย ไม่ต้องโหลดทั้งหมดใหม่
-      setData((d) => ({ ...d, items: d.items.filter((x) => x.id !== toDelete.id) }));
+      setData((d) => ({ ...d, items: d.items.filter((x) => x.id !== toDelete.id), total: d.total - 1 }));
+      toast.success(`ลบ "${toDelete.title}" แล้ว`);
     } catch (err) {
-      setDeleteError(err.message);
+      toast.error(err.message);
     } finally {
       setDeleting(false);
       setToDelete(null);
@@ -41,12 +46,17 @@ function AdminArticles() {
   return (
     <div>
       <PageHeader title="จัดการบทความ">{newButton}</PageHeader>
+      <SearchBox key={q} value={q} onSearch={setQ} placeholder="ค้นหาบทความ รวมฉบับร่าง…" />
       {loading && !data && <Loading />}
       {error && <Alert>{error.message}</Alert>}
-      {deleteError && <Alert>{deleteError}</Alert>}
-      {data?.items.length === 0 && <EmptyState message="ยังไม่มีบทความ">{newButton}</EmptyState>}
+      {data?.items.length === 0 &&
+        (q ? (
+          <EmptyState message={`ไม่พบบทความที่ตรงกับ "${q}"`} />
+        ) : (
+          <EmptyState message="ยังไม่มีบทความ">{newButton}</EmptyState>
+        ))}
       {data?.items.length > 0 && (
-        <ul className="mt-4 divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
           {data.items.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">
@@ -70,6 +80,7 @@ function AdminArticles() {
           ))}
         </ul>
       )}
+      {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} />}
       <ConfirmDialog
         open={toDelete !== null}
         title="ลบบทความนี้?"

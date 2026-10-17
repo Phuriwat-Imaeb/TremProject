@@ -1,4 +1,4 @@
-import { apiFetch, register, setUnauthorizedHandler } from './backend';
+import { apiFetch, register, setUnauthorizedHandler, withQuery } from './backend';
 
 // ปั้นคำตอบปลอมให้หน้าตาเหมือน Response พอที่ apiFetch ใช้ (ok, status, json)
 function fakeResponse(status, body) {
@@ -62,4 +62,12 @@ test('401 ของคำขอที่แนบตั๋ว เรียกต
   await expect(apiFetch('/api/me', { token: 'old' })).rejects.toMatchObject({ status: 401 });
   expect(onUnauthorized).toHaveBeenCalledTimes(1);
   setUnauthorizedHandler(null);
+});
+
+test('withQuery ข้ามค่าว่าง และเข้ารหัสภาษาไทย', () => {
+  expect(withQuery('/api/articles', {})).toBe('/api/articles');
+  expect(withQuery('/api/articles', { q: '', page: undefined })).toBe('/api/articles');
+  expect(withQuery('/api/articles', { q: 'แมว ส้ม', page: 2 })).toBe(
+    '/api/articles?q=%E0%B9%81%E0%B8%A1%E0%B8%A7+%E0%B8%AA%E0%B9%89%E0%B8%A1&page=2'
+  );
 });

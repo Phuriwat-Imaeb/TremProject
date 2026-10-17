@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"petfinder/auth"
 	"petfinder/store"
@@ -44,6 +46,34 @@ func readJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 func internal(w http.ResponseWriter, err error) {
 	log.Printf("internal error: %v", err)
 	writeError(w, http.StatusInternalServerError, "INTERNAL", "ระบบขัดข้อง ลองใหม่อีกครั้ง")
+}
+
+// pageSize จำนวนรายการต่อหน้าของทุกหน้ารายการที่แบ่งหน้า
+const pageSize = 10
+
+// readPaging อ่าน ?q=คำค้น&page=เลขหน้า ของหน้ารายการ (ไม่ส่ง page = หน้า 1)
+// ผิดรูปตอบ 400 BAD_FILTER ให้เลยแล้วคืน ok = false
+func readPaging(w http.ResponseWriter, r *http.Request) (q string, page int, ok bool) {
+	q = strings.TrimSpace(r.URL.Query().Get("q"))
+	page = 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 10000 {
+			writeError(w, http.StatusBadRequest, "BAD_FILTER", "เลขหน้าต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป")
+			return "", 0, false
+		}
+		page = n
+	}
+	if utf8.RuneCountInString(q) > 100 {
+		writeError(w, http.StatusBadRequest, "BAD_FILTER", "คำค้นยาวได้ไม่เกิน 100 ตัวอักษร")
+		return "", 0, false
+	}
+	return q, page, true
+}
+
+// writePage ตอบรายการแบบแบ่งหน้า {"items", "page", "pageSize", "total"}
+func writePage(w http.ResponseWriter, items any, page, total int) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "pageSize": pageSize, "total": total})
 }
 
 // pathID อ่านเลขจาก path เช่น /api/lost-reports/{id} ต้องเป็นเลขบวกเท่านั้น

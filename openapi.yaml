@@ -871,7 +871,10 @@ paths:
   /api/articles:
     get:
       tags: [Articles]
-      summary: บทความที่เผยแพร่แล้ว
+      summary: บทความที่เผยแพร่แล้ว (ค้นหา + แบ่งหน้า หน้าละ 10)
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Page"
       responses:
         "200":
           description: บทความ ใหม่สุดก่อน (ไม่มีฉบับร่าง)
@@ -879,6 +882,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticleList"
+        "400":
+          $ref: "#/components/responses/BadFilter"
 
   /api/articles/{id}:
     parameters:
@@ -1045,9 +1050,12 @@ paths:
   /api/admin/articles:
     get:
       tags: [Admin]
-      summary: บทความทั้งหมด รวมฉบับร่าง
+      summary: บทความทั้งหมด รวมฉบับร่าง (ค้นหา + แบ่งหน้า หน้าละ 10)
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Page"
       responses:
         "200":
           description: บทความ ใหม่สุดก่อน
@@ -1055,6 +1063,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticleList"
+        "400":
+          $ref: "#/components/responses/BadFilter"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1178,6 +1188,23 @@ components:
       description: กรองด้วย id ของพื้นที่
       schema:
         type: integer
+      example: 1
+    Q:
+      name: q
+      in: query
+      description: คำค้น หาในหัวข้อหรือเนื้อหา ไม่สนตัวพิมพ์เล็กใหญ่ ไม่เกิน 100 ตัวอักษร
+      schema:
+        type: string
+        maxLength: 100
+      example: แมว
+    Page:
+      name: page
+      in: query
+      description: เลขหน้า เริ่มที่ 1 (ไม่ส่ง = หน้า 1) เกินหน้าสุดท้ายได้ items ว่าง
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
       example: 1
 
   responses:
@@ -1909,3 +1936,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Article"
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          description: จำนวนทั้งหมดที่ตรงคำค้น (ทุกหน้ารวมกัน) จำนวนหน้า = ceil(total / pageSize)
+          example: 2

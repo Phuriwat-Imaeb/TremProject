@@ -45,17 +45,26 @@ export function getMe(token) {
   return apiFetch('/api/me', { token });
 }
 
+// ต่อ query string ให้ path ข้ามค่าที่ว่าง เช่น withQuery('/api/articles', { q: 'แมว', page: 2 })
+// → '/api/articles?q=%E0%B9%81...&page=2' (URLSearchParams เข้ารหัสภาษาไทยให้เอง)
+export function withQuery(path, params) {
+  const filled = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const qs = new URLSearchParams(filled).toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 // ---------- บทความ (แม่แบบ CRUD) ----------
 // หน้าบ้าน: ใครก็อ่านได้ แนบ token มาด้วยถ้ามี (login แล้วจะเห็นเบอร์โทรคนเขียน)
-export function listArticles(token) {
-  return apiFetch('/api/articles', { token });
+// ได้ { items, page, pageSize, total }
+export function listArticles({ q, page } = {}, token) {
+  return apiFetch(withQuery('/api/articles', { q, page }), { token });
 }
 export function getArticle(id, token) {
   return apiFetch(`/api/articles/${id}`, { token });
 }
 // หลังบ้าน: เฉพาะ admin เห็นฉบับร่างด้วย
-export function adminListArticles(token) {
-  return apiFetch('/api/admin/articles', { token });
+export function adminListArticles({ q, page } = {}, token) {
+  return apiFetch(withQuery('/api/admin/articles', { q, page }), { token });
 }
 export function adminGetArticle(id, token) {
   return apiFetch(`/api/admin/articles/${id}`, { token });
@@ -68,4 +77,13 @@ export function updateArticle(id, input, token) {
 }
 export function deleteArticle(id, token) {
   return apiFetch(`/api/admin/articles/${id}`, { method: 'DELETE', token });
+}
+
+// ---------- หลังบ้าน: สมาชิก ----------
+export function adminListMembers(token) {
+  return apiFetch('/api/admin/members', { token });
+}
+// สมาชิกต้อง login ใหม่ บทบาทในตั๋วถึงจะเปลี่ยน
+export function setMemberRole(id, role, token) {
+  return apiFetch(`/api/admin/members/${id}/role`, { method: 'PUT', body: { role }, token });
 }

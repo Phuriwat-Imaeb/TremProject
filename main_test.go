@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,4 +138,84 @@ func TestArticlesCRUD(t *testing.T) {
 	if code := call(t, srv, "DELETE", adminOne, admin, nil, nil); code != 404 {
 		t.Errorf("ลบซ้ำ ต้องได้ 404 ได้ %d", code)
 	}
+}
+
+func TestArticlesSearchAndPaging(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	admin, _ := tickets.Issue(1, "admin")
+
+	// สร้าง 12 เรื่องที่มีคำเฉพาะ ค้นด้วยคำนี้แล้วต้องเจอแค่ 12 เรื่องนี้ (ลบทิ้งตอนจบ)
+	mark := fmt.Sprintf("ทดสอบแบ่งหน้า-%d", time.Now().UnixNano())
+	for i := 1; i <= 12; i++ {
+		var a store.Article
+		in := map[string]any{"title": fmt.Sprintf("%s เรื่องที่ %d", mark, i), "body": "50% off", "published": true}
+		if code := call(t, srv, "POST", "/api/admin/articles", admin, in, &a); code != 201 {
+			t.Fatalf("สร้างเรื่องที่ %d ได้ %d", i, code)
+		}
+		t.Cleanup(func() { call(t, srv, "DELETE", fmt.Sprintf("/api/admin/articles/%d", a.ID), admin, nil, nil) })
+	}
+
+	type page struct {
+		Items                 []store.Article
+		Page, PageSize, Total int
+	}
+	var p page
+	q := "/api/articles?q=" + url.QueryEscape(mark)
+	if code := call(t, srv, "GET", q, "", nil, &p); code != 200 || p.Total != 12 || len(p.Items) != 10 || p.Page != 1 || p.PageSize != 10 {
+		t.Errorf("หน้า 1 ต้องได้ 10 จากทั้งหมด 12 ได้ %d total=%d items=%d", code, p.Total, len(p.Items))
+	}
+	if p.Items[0].Title != mark+" เรื่องที่ 12" {
+		t.Errorf("ต้องเรียงใหม่สุดก่อน ได้ %q", p.Items[0].Title)
+	}
+	if call(t, srv, "GET", q+"&page=2", "", nil, &p); len(p.Items) != 2 || p.Page != 2 {
+		t.Errorf("หน้า 2 ต้องเหลือ 2 เรื่อง ได้ %d", len(p.Items))
+	}
+	if call(t, srv, "GET", q+"&page=3", "", nil, &p); len(p.Items) != 0 || p.Total != 12 {
+		t.Errorf("เกินหน้าสุดท้ายต้องได้รายการว่าง แต่ total ยังเป็น 12 ได้ %d %d", len(p.Items), p.Total)
+	}
+
+	// % ในคำค้นต้องหาตัวอักษร % จริง ไม่ใช่ wildcard ที่เจอทุกแถว
+	if call(t, srv, "GET", q+url.QueryEscape(" เรื่องที่ 1%"), "", nil, &p); p.Total != 0 {
+		t.Errorf(`ค้น "1%%" ต้องไม่เจอ (ไม่มีหัวข้อไหนมี %%) ได้ %d`, p.Total)
+	}
+
+	for _, bad := range []string{"page=0", "page=abc", "q=" + strings.Repeat("ก", 101)} {
+		var e struct{ Error struct{ Code string } }
+		if code := call(t, srv, "GET", "/api/articles?"+bad, "", nil, &e); code != 400 || e.Error.Code != "BAD_FILTER" {
+			t.Errorf("%s ต้องได้ 400 BAD_FILTER ได้ %d %s", bad, code, e.Error.Code)
+		}
+	}
+}
+
+func TestAdminMembers(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	// id ตาม seed.sql: 1 = admin, 3 = นิดา (member)
+	admin, _ := tickets.Issue(1, "admin")
+	member, _ := tickets.Issue(3, "member")
+
+	var list struct{ Items []store.Member }
+	if code := call(t, srv, "GET", "/api/admin/members", admin, nil, &list); code != 200 || len(list.Items) < 4 || list.Items[0].ID != 1 {
+		t.Errorf("admin ต้องเห็นสมาชิกทั้งหมด เรียงตาม id ได้ %d %d คน", code, len(list.Items))
+	}
+	if code := call(t, srv, "GET", "/api/admin/members", member, nil, nil); code != 403 {
+		t.Errorf("member ต้องได้ 403 ได้ %d", code)
+	}
+
+	var e struct{ Error struct{ Code string } }
+	if code := call(t, srv, "PUT", "/api/admin/members/1/role", admin, map[string]string{"role": "member"}, &e); code != 409 || e.Error.Code != "CANNOT_CHANGE_SELF" {
+		t.Errorf("เปลี่ยนบทบาทตัวเอง ต้องได้ 409 CANNOT_CHANGE_SELF ได้ %d %s", code, e.Error.Code)
+	}
+	if code := call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "king"}, &e); code != 400 || e.Error.Code != "BAD_STATUS" {
+		t.Errorf("บทบาทที่ไม่มี ต้องได้ 400 BAD_STATUS ได้ %d %s", code, e.Error.Code)
+	}
+	if code := call(t, srv, "PUT", "/api/admin/members/999999999/role", admin, map[string]string{"role": "member"}, nil); code != 404 {
+		t.Errorf("id ที่ไม่มี ต้องได้ 404 ได้ %d", code)
+	}
+
+	var m store.Member
+	if code := call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "rescuer"}, &m); code != 200 || m.Role != "rescuer" {
+		t.Errorf("เปลี่ยนเป็น rescuer ต้องได้ 200 ได้ %d %+v", code, m)
+	}
+	// คืนค่าเดิม เทสต์อื่นและ seed จะได้ไม่เพี้ยน
+	call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "member"}, nil)
 }

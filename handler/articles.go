@@ -44,17 +44,9 @@ func hidePhone(r *http.Request, a *store.Article) {
 	}
 }
 
-// ListArticles  GET /api/articles  เฉพาะที่เผยแพร่แล้ว ใหม่สุดก่อน
+// ListArticles  GET /api/articles?q=&page=  เฉพาะที่เผยแพร่แล้ว ใหม่สุดก่อน หน้าละ 10
 func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
-	items, err := h.Store.ListArticles(r.Context(), false)
-	if err != nil {
-		internal(w, err)
-		return
-	}
-	for i := range items {
-		hidePhone(r, &items[i])
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	h.listArticles(w, r, false)
 }
 
 // GetArticle  GET /api/articles/{id}  ฉบับร่างตอบ 404 เหมือนไม่มี
@@ -62,14 +54,26 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	h.getArticle(w, r, false)
 }
 
-// AdminListArticles  GET /api/admin/articles  รวมฉบับร่าง
+// AdminListArticles  GET /api/admin/articles?q=&page=  รวมฉบับร่าง
 func (h *Handler) AdminListArticles(w http.ResponseWriter, r *http.Request) {
-	items, err := h.Store.ListArticles(r.Context(), true)
+	h.listArticles(w, r, true)
+}
+
+func (h *Handler) listArticles(w http.ResponseWriter, r *http.Request, drafts bool) {
+	q, page, ok := readPaging(w, r)
+	if !ok {
+		return
+	}
+	items, total, err := h.Store.ListArticles(r.Context(),
+		store.ArticleFilter{Drafts: drafts, Q: q, Page: page, PageSize: pageSize})
 	if err != nil {
 		internal(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	for i := range items {
+		hidePhone(r, &items[i])
+	}
+	writePage(w, items, page, total)
 }
 
 // AdminGetArticle  GET /api/admin/articles/{id}  อ่านฉบับร่างได้ ใช้เปิดหน้าแก้ไข

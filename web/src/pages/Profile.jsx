@@ -1,8 +1,7 @@
 import { useAuth } from '../auth/AuthContext';
 import Loading from '../components/Loading';
+import { ROLE_LABEL } from '../config';
 import usePageTitle from '../hooks/usePageTitle';
-
-const roleLabel = { member: 'สมาชิก', rescuer: 'ผู้ช่วยเหลือสัตว์', admin: 'ผู้ดูแลระบบ' };
 
 // อยู่ใต้ ProtectedRoute จึงมั่นใจว่า login แล้ว ข้อมูลมาจาก GET /api/me ที่ AuthProvider ถามไว้
 function Profile() {
@@ -16,7 +15,7 @@ function Profile() {
         <Row label="ชื่อที่แสดง" value={member.displayName} />
         <Row label="อีเมล" value={member.email} />
         <Row label="เบอร์โทร" value={member.phone || '-'} />
-        <Row label="บทบาท" value={roleLabel[member.role] ?? member.role} />
+        <Row label="บทบาท" value={ROLE_LABEL[member.role] ?? member.role} />
       </dl>
     </div>
   );

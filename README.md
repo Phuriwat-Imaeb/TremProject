@@ -84,13 +84,17 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `GET /api/species`, `GET /api/areas`
 - บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
   และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
+  หน้ารายการรับ `?q=คำค้น&page=เลขหน้า` หน้าละ 10 ตอบ `{ items, page, pageSize, total }`
+- สมาชิก (เฉพาะ admin): `GET /api/admin/members`, `PUT /api/admin/members/{id}/role` (เปลี่ยนของตัวเองไม่ได้ ตอบ 409)
 
 ## หน้าเว็บที่ทำแล้ว
 
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
 - `/articles`, `/articles/:id` อ่านบทความ
-- `/admin/articles` จัดการบทความ, `/admin/articles/new` เขียนใหม่, `/admin/articles/:id/edit` แก้ไข (เฉพาะ admin)
+- `/articles` ค้นหาและเลื่อนหน้าได้ คำค้นกับเลขหน้าอยู่ใน URL (`?q=&page=`) กด back ได้ แชร์ลิงก์ได้
+- หลังบ้าน `/admin` (เฉพาะ admin) มีแท็บ: `/admin/articles` จัดการบทความ (ค้นหาได้ รวมฉบับร่าง),
+  `/admin/articles/new` เขียนใหม่, `/admin/articles/:id/edit` แก้ไข, `/admin/members` เปลี่ยนบทบาทสมาชิก
 - URL ที่ไม่มีอยู่ขึ้นหน้า 404
 - ตั๋วหมดอายุระหว่างใช้งาน (ได้ 401) จะออกจากระบบให้ พาไป `/login` พร้อมบอกเหตุผล แล้วกลับหน้าเดิมหลังเข้าสู่ระบบใหม่
 
@@ -101,7 +105,10 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 | [web/src/config.js](web/src/config.js) | ชื่อแอป `APP_NAME` เปลี่ยนหัวข้อแก้ที่นี่ (กับ `<title>` ใน `public/index.html` และ `public/manifest.json`) |
 | [web/src/hooks/useApi.js](web/src/hooks/useApi.js) | โหลดข้อมูลแบบ 3 สถานะ `{ data, error, loading }` พร้อม `setData`, `reload` |
 | [web/src/hooks/usePageTitle.js](web/src/hooks/usePageTitle.js) | ชื่อแท็บเบราว์เซอร์ของแต่ละหน้า |
-| [web/src/components/](web/src/components) | `Button`/`ButtonLink`, `Alert`, `Loading`, `EmptyState`, `PageHeader`, `ConfirmDialog`, `Field`, `ProtectedRoute`, `Navbar` |
+| [web/src/hooks/useListQuery.js](web/src/hooks/useListQuery.js) | คำค้น + เลขหน้าจาก URL ของหน้ารายการ |
+| [web/src/components/](web/src/components) | `Button`/`ButtonLink`, `Alert`, `Loading`, `EmptyState`, `PageHeader`, `ConfirmDialog`, `SearchBox`, `Pagination`, `Field`, `ProtectedRoute`, `Navbar` |
+| [web/src/components/Toast.jsx](web/src/components/Toast.jsx) | ข้อความเด้งมุมจอ `useToast().success(...)` / `.error(...)` |
+| [web/src/test-utils.jsx](web/src/test-utils.jsx) | ตัวช่วยเทสต์: `renderWithProviders`, `loginAs`, ข้อมูลปลอม |
 
 ## แม่แบบ CRUD
 

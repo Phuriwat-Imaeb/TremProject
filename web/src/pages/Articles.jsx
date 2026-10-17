@@ -5,23 +5,31 @@ import Alert from '../components/Alert';
 import EmptyState from '../components/EmptyState';
 import Loading from '../components/Loading';
 import PageHeader from '../components/PageHeader';
+import Pagination from '../components/Pagination';
+import SearchBox from '../components/SearchBox';
 import useApi from '../hooks/useApi';
+import useListQuery from '../hooks/useListQuery';
 import usePageTitle from '../hooks/usePageTitle';
 
 export const thaiDate = (iso) => new Date(iso).toLocaleDateString('th-TH', { dateStyle: 'medium' });
 
-// หน้าบ้าน: รายการบทความที่เผยแพร่แล้ว (แม่แบบหน้า "รายการ")
+// หน้าบ้าน: รายการบทความที่เผยแพร่แล้ว ค้นหา + แบ่งหน้า (แม่แบบหน้า "รายการ")
 function Articles() {
   usePageTitle('บทความ');
   const { token } = useAuth();
-  const { data, error, loading } = useApi(() => api.listArticles(token), [token]);
+  const { q, page, setQ } = useListQuery();
+  const { data, error, loading } = useApi(() => api.listArticles({ q, page }, token), [q, page, token]);
 
   return (
     <div>
       <PageHeader title="บทความ" />
+      {/* key: กด back จน q ใน URL เปลี่ยน ช่องค้นหาต้องเปลี่ยนตาม */}
+      <SearchBox key={q} value={q} onSearch={setQ} placeholder="ค้นหาบทความ…" />
       {loading && !data && <Loading />}
       {error && <Alert>{error.message}</Alert>}
-      {data?.items.length === 0 && <EmptyState message="ยังไม่มีบทความ" />}
+      {data?.items.length === 0 && (
+        <EmptyState message={q ? `ไม่พบบทความที่ตรงกับ "${q}"` : 'ยังไม่มีบทความ'} />
+      )}
       <ul className="space-y-3">
         {data?.items.map((a) => (
           <li key={a.id} className="rounded-md border border-gray-200 bg-white p-4">
@@ -35,6 +43,7 @@ function Articles() {
           </li>
         ))}
       </ul>
+      {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} />}
     </div>
   );
 }
