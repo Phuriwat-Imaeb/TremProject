@@ -1087,6 +1087,26 @@ paths:
   /api/admin/articles/{id}:
     parameters:
       - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Admin]
+      summary: อ่านบทความหนึ่งเรื่อง รวมฉบับร่าง (ใช้เปิดหน้าแก้ไข)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: บทความที่ขอ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          $ref: "#/components/responses/BadID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     put:
       tags: [Admin]
       summary: แก้ไขบทความทั้งเรื่อง (ใช้เผยแพร่/ซ่อนด้วย published)
@@ -1848,6 +1868,7 @@ components:
         coverUrl:
           type: string
           nullable: true
+          description: ต้องขึ้นต้นด้วย http:// หรือ https:// ส่งว่างหรือ null = ไม่มีรูป
           example: null
         published:
           type: boolean

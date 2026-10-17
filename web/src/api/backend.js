@@ -36,3 +36,28 @@ export function login(email, password) {
 export function getMe(token) {
   return apiFetch('/api/me', { token });
 }
+
+// ---------- บทความ (แม่แบบ CRUD) ----------
+// หน้าบ้าน: ใครก็อ่านได้ แนบ token มาด้วยถ้ามี (login แล้วจะเห็นเบอร์โทรคนเขียน)
+export function listArticles(token) {
+  return apiFetch('/api/articles', { token });
+}
+export function getArticle(id, token) {
+  return apiFetch(`/api/articles/${id}`, { token });
+}
+// หลังบ้าน: เฉพาะ admin เห็นฉบับร่างด้วย
+export function adminListArticles(token) {
+  return apiFetch('/api/admin/articles', { token });
+}
+export function adminGetArticle(id, token) {
+  return apiFetch(`/api/admin/articles/${id}`, { token });
+}
+export function createArticle(input, token) {
+  return apiFetch('/api/admin/articles', { method: 'POST', body: input, token });
+}
+export function updateArticle(id, input, token) {
+  return apiFetch(`/api/admin/articles/${id}`, { method: 'PUT', body: input, token });
+}
+export function deleteArticle(id, token) {
+  return apiFetch(`/api/admin/articles/${id}`, { method: 'DELETE', token });
+}

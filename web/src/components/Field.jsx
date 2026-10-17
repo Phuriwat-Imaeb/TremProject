@@ -1,9 +1,10 @@
-// ช่องกรอกพร้อมป้ายชื่อ ใช้ร่วมกันในฟอร์ม Login / Register
-function Field({ label, hint, ...inputProps }) {
+// ช่องกรอกพร้อมป้ายชื่อ ใช้ร่วมกันในทุกฟอร์ม
+// as="textarea" ได้ช่องข้อความหลายบรรทัด (เช่น เนื้อหาบทความ)
+function Field({ label, hint, as: Input = 'input', ...inputProps }) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
-      <input
+      <Input
         {...inputProps}
         className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
       />

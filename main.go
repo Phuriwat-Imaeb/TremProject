@@ -39,14 +39,7 @@ func main() {
 
 	tickets := &auth.Issuer{Secret: []byte(secret), TTL: time.Hour}
 	h := &handler.Handler{Store: &store.Store{Pool: pool}, Tickets: tickets}
-	login := func(f http.HandlerFunc) http.HandlerFunc { return mw.RequireLogin(tickets, f) }
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/auth/register", h.Register)
-	mux.HandleFunc("POST /api/auth/login", h.Login)
-	mux.HandleFunc("GET /api/me", login(h.Me))
-	mux.HandleFunc("GET /api/species", h.ListSpecies)
-	mux.HandleFunc("GET /api/areas", h.ListAreas)
+	mux := routes(h, tickets) // รายการเส้นทางทั้งหมดอยู่ใน routes.go
 
 	// หน้าเว็บ React จาก origin ไหนเรียก API ได้ คั่นด้วยจุลภาค เช่น http://localhost:3000
 	origins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")

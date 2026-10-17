@@ -73,14 +73,37 @@ go test ./...
 cd web && npm test
 ```
 
+เทสต์ของ Go ที่ยิงคำขอผ่านทุกชั้นจนถึงฐานข้อมูลจริง ([main_test.go](main_test.go)) จะรันเฉพาะตอนตั้ง `DATABASE_URL`
+ไว้แล้วรัน `schema.sql` + `seed.sql` เรียบร้อย ไม่ตั้งก็ข้ามไปเฉย ๆ (เทสต์จะสร้างแล้วลบบทความของตัวเอง ไม่ทิ้งขยะไว้)
+
 GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต์ของ Go กับเทสต์ + build ของหน้าเว็บ ให้ทุกครั้งที่ push ขึ้น `main`
 
 ## เส้นทางที่ทำแล้ว
 
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
 - `GET /api/species`, `GET /api/areas`
+- บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
+  และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
 
 ## หน้าเว็บที่ทำแล้ว
 
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
+- `/articles`, `/articles/:id` อ่านบทความ
+- `/admin/articles` จัดการบทความ, `/admin/articles/new` เขียนใหม่, `/admin/articles/:id/edit` แก้ไข (เฉพาะ admin)
+
+## แม่แบบ CRUD
+
+บทความเป็นตัวอย่าง CRUD ครบชุดหนึ่งตาราง ทำตารางใหม่ให้คัดลอกไฟล์ชุดนี้แล้วเปลี่ยนชื่อ/ฟิลด์
+
+| ชั้น | ไฟล์ | ทำอะไร |
+|---|---|---|
+| ฐานข้อมูล | `db/schema.sql` | สร้างตาราง |
+| store | [store/articles.go](store/articles.go) | SQL ล้วน ๆ ไม่รู้จัก HTTP หาไม่เจอคืน `ErrNotFound` |
+| handler | [handler/articles.go](handler/articles.go) | อ่าน/ตรวจ JSON แปลง error เป็นเลขสถานะ |
+| เส้นทาง | [routes.go](routes.go) | ผูก path กับ handler และด่านสิทธิ์ `login` / `maybe` / `admin` |
+| สัญญา | [openapi.yaml](openapi.yaml) | หน้าตาคำขอและคำตอบ |
+| เทสต์ API | [main_test.go](main_test.go) | 401/403/400/404 และสร้าง-อ่าน-แก้-ลบ ผ่านฐานข้อมูลจริง |
+| หน้าเว็บ | [web/src/api/backend.js](web/src/api/backend.js) | ฟังก์ชันเรียก API |
+| | [web/src/pages/Articles.jsx](web/src/pages/Articles.jsx), [ArticleDetail.jsx](web/src/pages/ArticleDetail.jsx) | หน้ารายการ + รายละเอียด |
+| | [web/src/pages/admin/](web/src/pages/admin) | ตารางจัดการ + ฟอร์มเดียวใช้ทั้งสร้างและแก้ไข |

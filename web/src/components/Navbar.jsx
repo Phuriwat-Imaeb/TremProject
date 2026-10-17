@@ -19,7 +19,15 @@ function Navbar() {
         <Link to="/" className="text-lg font-bold text-white">
           PetFinder
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          <NavLink to="/articles" className={linkClass}>
+            บทความ
+          </NavLink>
+          {member?.role === 'admin' && (
+            <NavLink to="/admin/articles" className={linkClass}>
+              หลังบ้าน
+            </NavLink>
+          )}
           {isLoggedIn ? (
             <>
               <NavLink to="/me" className={linkClass}>
