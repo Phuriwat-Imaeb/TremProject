@@ -91,7 +91,7 @@ func TestRequireRole(t *testing.T) {
 
 func TestCORS(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTeapot) })
-	h := CORS([]string{"http://localhost:3000", ""}, next)
+	h := CORS([]string{"http://localhost:3000", "", " https://x.vercel.app/"}, next)
 
 	preflight := func(origin string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodOptions, "/api/lost-reports/1", nil)
@@ -108,6 +108,11 @@ func TestCORS(t *testing.T) {
 	}
 	if m := rec.Header().Get("Access-Control-Allow-Methods"); !strings.Contains(m, "PATCH") {
 		t.Errorf("ต้องอนุญาต PATCH ได้ %q", m)
+	}
+
+	// ตั้งค่ามีช่องว่างกับ / ท้าย ก็ยังต้องตรงกับ Origin ที่เบราว์เซอร์ส่งมา
+	if rec = preflight("https://x.vercel.app"); rec.Header().Get("Access-Control-Allow-Origin") != "https://x.vercel.app" {
+		t.Error("origin ที่ตั้งค่าไว้มี / ท้าย ต้องยังได้ header")
 	}
 
 	rec = preflight("http://evil.example")

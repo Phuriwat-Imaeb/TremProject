@@ -1,7 +1,7 @@
 // ทุกคำขอไป Go วิ่งผ่านไฟล์นี้ หน้าเว็บไม่ต้องรู้จัก fetch เอง
 // BASE ว่าง = ยิงไป origin เดียวกับหน้าเว็บ แล้ว dev server ส่งต่อให้ Go ที่ :8080 (ดู src/setupProxy.js)
-// ตอน deploy ตั้ง REACT_APP_API_URL เป็น URL ของ API จริง
-const BASE = process.env.REACT_APP_API_URL || '';
+// ตอน deploy ตั้ง REACT_APP_API_URL เป็น URL ของ API จริง (ตัด / ท้ายทิ้ง กันได้ //api/...)
+const BASE = (process.env.REACT_APP_API_URL || '').replace(/\/+$/, '');
 
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };

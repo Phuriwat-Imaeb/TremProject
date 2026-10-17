@@ -1,0 +1,22 @@
+# พิมพ์เขียวสำหรับ Render (New → Blueprint → เลือก repo นี้) สร้าง API ให้ตามนี้
+# ฐานข้อมูลอยู่ที่ Neon (ฟรีไม่หมดอายุ) ไม่ได้อยู่บน Render
+services:
+  - type: web
+    name: tremproject-api
+    runtime: go
+    plan: free
+    region: singapore
+    # go.mod ระบุเวอร์ชัน Go ไว้ ถ้า Render มีเก่ากว่า go จะโหลดเวอร์ชันที่ต้องการมาเอง
+    buildCommand: go build -o app .
+    startCommand: ./app
+    # Render เรียกทางนี้เช็กว่า API ขึ้นแล้วและต่อฐานข้อมูลได้ ก่อนสลับไปใช้เวอร์ชันใหม่
+    healthCheckPath: /api/species
+    envVars:
+      # sync: false = Render จะถามค่าตอนสร้าง ไม่เขียนไว้ใน repo
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Render สุ่มกุญแจยาว ๆ ให้เอง ไม่ต้องสร้างเอง
+      - key: JWT_SECRET
+        generateValue: true

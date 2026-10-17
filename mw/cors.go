@@ -11,7 +11,8 @@ import (
 func CORS(allowed []string, next http.Handler) http.Handler {
 	ok := map[string]bool{}
 	for _, o := range allowed {
-		if o = strings.TrimSpace(o); o != "" {
+		// เบราว์เซอร์ส่ง Origin มาโดยไม่มี / ท้าย ถ้าตั้งค่าเผลอใส่ / มา ตัดทิ้งให้ตรงกัน
+		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
 			ok[o] = true
 		}
 	}

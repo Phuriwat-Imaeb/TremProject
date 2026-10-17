@@ -46,6 +46,26 @@ npm start          # เปิด http://localhost:3000
 | `ALLOWED_ORIGINS` | | origin ของหน้าเว็บ คั่นด้วยจุลภาค เช่น `http://localhost:3000,https://xxx.vercel.app` |
 | `PORT` | | port ที่เปิดรอ (ไม่ตั้ง = 8080, Render ตั้งให้เอง) |
 
+## Deploy
+
+ฐานข้อมูลบน [Neon](https://neon.tech), API บน [Render](https://render.com), หน้าเว็บบน [Vercel](https://vercel.com) ทั้งหมดใช้แบบฟรีได้
+
+1. **Neon**: สร้าง project (region Singapore) แล้วคัดลอก connection string (ขึ้นต้น `postgresql://...` และมี `?sslmode=require`)
+   เปิด SQL Editor วางเนื้อหา `db/schema.sql` กด Run แล้วทำแบบเดียวกันกับ `db/seed.sql`
+2. **Render**: New → Blueprint → เลือก repo นี้ จะอ่าน [render.yaml](render.yaml) แล้วถามค่า
+   - `DATABASE_URL` = connection string จาก Neon
+   - `ALLOWED_ORIGINS` = ใส่อะไรก็ได้ไปก่อน (เช่น `http://localhost:3000`) ได้ URL ของ Vercel แล้วค่อยมาแก้
+   - `JWT_SECRET` Render สุ่มให้เอง
+
+   เสร็จแล้วเปิด `https://<ชื่อ>.onrender.com/api/species` ต้องได้ JSON
+3. **Vercel**: Add New → Project → เลือก repo นี้ ตั้ง Root Directory เป็น `web`
+   และตั้ง Environment Variable `REACT_APP_API_URL` = URL ของ Render (ไม่ต้องมี `/` ท้าย)
+   ([web/vercel.json](web/vercel.json) ทำให้รีเฟรชหน้า `/login`, `/me` แล้วไม่ 404)
+4. กลับไปที่ Render แก้ `ALLOWED_ORIGINS` เป็น URL ของ Vercel เช่น `https://xxx.vercel.app` (Render จะ deploy ใหม่เอง)
+
+หลังจากนี้ push ขึ้น `main` ทั้ง Render และ Vercel จะ deploy ใหม่ให้เอง
+แบบฟรีของ Render จะหลับเมื่อไม่มีคนเรียก 15 นาที คำขอแรกหลังจากนั้นจะช้าราวครึ่งนาที
+
 ## เทสต์
 
 ```bash
