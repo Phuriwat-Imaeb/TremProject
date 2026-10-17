@@ -1,4 +1,4 @@
-import { apiFetch, register } from './backend';
+import { apiFetch, register, setUnauthorizedHandler } from './backend';
 
 // ปั้นคำตอบปลอมให้หน้าตาเหมือน Response พอที่ apiFetch ใช้ (ok, status, json)
 function fakeResponse(status, body) {
@@ -47,4 +47,19 @@ test('error แบบ Go { error: { code, message } } ได้ข้อคว�
 test('server ตอบไม่เป็น JSON ได้ข้อความภาษาคน', async () => {
   fetch.mockResolvedValue({ ok: false, status: 502, json: () => Promise.reject(new SyntaxError('Unexpected token <')) });
   await expect(apiFetch('/api/species')).rejects.toThrow('server ไม่ได้ตอบเป็น JSON');
+});
+
+test('401 ของคำขอที่แนบตั๋ว เรียกตัวจัดการตั๋วหมดอายุ แต่ 401 ที่ไม่ได้แนบตั๋ว (login รหัสผิด) ไม่เรียก', async () => {
+  const onUnauthorized = jest.fn();
+  setUnauthorizedHandler(onUnauthorized);
+  const expired = () => fakeResponse(401, { error: { code: 'TOKEN_INVALID', message: 'ตั๋วใช้ไม่ได้' } });
+
+  fetch.mockResolvedValue(expired());
+  await expect(apiFetch('/api/auth/login', { method: 'POST', body: {} })).rejects.toThrow();
+  expect(onUnauthorized).not.toHaveBeenCalled();
+
+  fetch.mockResolvedValue(expired());
+  await expect(apiFetch('/api/me', { token: 'old' })).rejects.toMatchObject({ status: 401 });
+  expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  setUnauthorizedHandler(null);
 });

@@ -1,38 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as api from '../../api/backend';
 import { useAuth } from '../../auth/AuthContext';
+import Alert from '../../components/Alert';
+import Button from '../../components/Button';
 import Field from '../../components/Field';
+import Loading from '../../components/Loading';
+import useApi from '../../hooks/useApi';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const empty = { title: '', body: '', coverUrl: '', published: false };
 
-// หลังบ้าน: ฟอร์มเดียวใช้ทั้งเขียนใหม่ (/admin/articles/new) และแก้ไข (/admin/articles/:id/edit)
-// มี :id ใน URL = แก้ไข โหลดของเดิมมาใส่ฟอร์มก่อน
+// หลังบ้าน: หน้าเดียวใช้ทั้งเขียนใหม่ (/admin/articles/new) และแก้ไข (/admin/articles/:id/edit)
+// มี :id ใน URL = แก้ไข โหลดของเดิมให้เสร็จก่อน แล้วค่อยส่งเป็นค่าตั้งต้นให้ฟอร์ม
 function ArticleForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
+  usePageTitle(isEdit ? 'แก้ไขบทความ' : 'เขียนบทความใหม่');
   const { token } = useAuth();
-  const navigate = useNavigate();
+  // หน้าเขียนใหม่ไม่ต้องโหลดอะไร คืน null ให้ useApi ข้ามไป
+  const { data, error, loading } = useApi(() => (isEdit ? api.adminGetArticle(id, token) : null), [id, token]);
 
-  const [form, setForm] = useState(isEdit ? null : empty); // null = กำลังโหลดของเดิม
+  if (loading) return <Loading />;
+  if (error) return <Alert>{error.message}</Alert>;
+
+  // coverUrl เป็น null ได้ แต่ช่องกรอกต้องเป็นสตริง
+  const initial = data ? { title: data.title, body: data.body, coverUrl: data.coverUrl ?? '', published: data.published } : empty;
+  // key: เปลี่ยนบทความ (หรือจากแก้ไขไปเขียนใหม่) ให้เริ่มฟอร์มใหม่หมด ไม่ค้างค่าของเรื่องเดิม
+  return <Editor key={id ?? 'new'} id={id} initial={initial} token={token} />;
+}
+
+// ตัวฟอร์มจริง ได้ค่าตั้งต้นครบแล้วตั้งแต่ render แรก จึงไม่ต้องมี state "กำลังโหลด" ปนกับ state ของฟอร์ม
+function Editor({ id, initial, token }) {
+  const navigate = useNavigate();
+  const [form, setForm] = useState(initial);
   const [status, setStatus] = useState('typing'); // typing | submitting
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!isEdit) return;
-    let cancelled = false;
-    api
-      .adminGetArticle(id, token)
-      .then((a) => {
-        if (cancelled) return;
-        // coverUrl เป็น null ได้ แต่ช่องกรอกต้องเป็นสตริง
-        setForm({ title: a.title, body: a.body, coverUrl: a.coverUrl ?? '', published: a.published });
-      })
-      .catch((err) => !cancelled && setError(err.message));
-    return () => {
-      cancelled = true;
-    };
-  }, [id, isEdit, token]);
 
   // ช่องไหนเปลี่ยน แก้แค่ช่องนั้น ช่องอื่นคงเดิม
   const set = (name) => (e) => {
@@ -45,7 +48,7 @@ function ArticleForm() {
     setStatus('submitting');
     setError(null);
     try {
-      if (isEdit) await api.updateArticle(id, form, token);
+      if (id) await api.updateArticle(id, form, token);
       else await api.createArticle(form, token);
       navigate('/admin/articles');
     } catch (err) {
@@ -54,13 +57,9 @@ function ArticleForm() {
     }
   }
 
-  if (!form) {
-    return error ? <p role="alert" className="text-red-700">{error}</p> : <p>กำลังโหลด…</p>;
-  }
-
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold">{isEdit ? 'แก้ไขบทความ' : 'เขียนบทความใหม่'}</h1>
+      <h1 className="mb-6 text-2xl font-bold">{id ? 'แก้ไขบทความ' : 'เขียนบทความใหม่'}</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="หัวข้อ" required maxLength={200} value={form.title} onChange={set('title')} />
         <Field label="เนื้อหา" as="textarea" rows={10} required value={form.body} onChange={set('body')} />
@@ -75,26 +74,14 @@ function ArticleForm() {
           <input type="checkbox" checked={form.published} onChange={set('published')} />
           เผยแพร่ (ไม่ติ๊ก = เก็บเป็นฉบับร่าง หน้าบ้านมองไม่เห็น)
         </label>
-        {error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        )}
+        {error && <Alert>{error}</Alert>}
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={status === 'submitting'}
-            className="rounded-md bg-teal-600 px-4 py-2 font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={status === 'submitting'}>
             {status === 'submitting' ? 'กำลังบันทึก…' : 'บันทึก'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/articles')}
-            className="rounded-md px-4 py-2 text-gray-700 hover:bg-gray-100"
-          >
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/admin/articles')}>
             ยกเลิก
-          </button>
+          </Button>
         </div>
       </form>
     </div>

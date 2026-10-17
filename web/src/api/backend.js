@@ -3,6 +3,13 @@
 // ตอน deploy ตั้ง REACT_APP_API_URL เป็น URL ของ API จริง (ตัด / ท้ายทิ้ง กันได้ //api/...)
 const BASE = (process.env.REACT_APP_API_URL || '').replace(/\/+$/, '');
 
+// AuthProvider ฝากฟังก์ชันไว้ที่นี่: คำขอที่แนบตั๋วไปแล้วได้ 401 = ตั๋วหมดอายุ/ใช้ไม่ได้ ให้ออกจากระบบ
+// (คำขอที่ไม่ได้แนบตั๋ว เช่น login รหัสผิด ก็ได้ 401 แต่แบบนั้นไม่เกี่ยวกับตั๋ว จึงไม่เรียก)
+let onUnauthorized = null;
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn;
+}
+
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -21,6 +28,7 @@ export async function apiFetch(path, { method = 'GET', body, token } = {}) {
     const err = new Error(data.error?.message ?? data.error ?? `server ตอบกลับ ${res.status}`);
     err.status = res.status;
     err.code = data.error?.code;
+    if (res.status === 401 && token && onUnauthorized) onUnauthorized();
     throw err;
   }
   return data;

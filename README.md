@@ -91,6 +91,17 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
 - `/articles`, `/articles/:id` อ่านบทความ
 - `/admin/articles` จัดการบทความ, `/admin/articles/new` เขียนใหม่, `/admin/articles/:id/edit` แก้ไข (เฉพาะ admin)
+- URL ที่ไม่มีอยู่ขึ้นหน้า 404
+- ตั๋วหมดอายุระหว่างใช้งาน (ได้ 401) จะออกจากระบบให้ พาไป `/login` พร้อมบอกเหตุผล แล้วกลับหน้าเดิมหลังเข้าสู่ระบบใหม่
+
+### ของที่ใช้ร่วมกันในหน้าเว็บ
+
+| ไฟล์ | ใช้ทำอะไร |
+|---|---|
+| [web/src/config.js](web/src/config.js) | ชื่อแอป `APP_NAME` เปลี่ยนหัวข้อแก้ที่นี่ (กับ `<title>` ใน `public/index.html` และ `public/manifest.json`) |
+| [web/src/hooks/useApi.js](web/src/hooks/useApi.js) | โหลดข้อมูลแบบ 3 สถานะ `{ data, error, loading }` พร้อม `setData`, `reload` |
+| [web/src/hooks/usePageTitle.js](web/src/hooks/usePageTitle.js) | ชื่อแท็บเบราว์เซอร์ของแต่ละหน้า |
+| [web/src/components/](web/src/components) | `Button`/`ButtonLink`, `Alert`, `Loading`, `EmptyState`, `PageHeader`, `ConfirmDialog`, `Field`, `ProtectedRoute`, `Navbar` |
 
 ## แม่แบบ CRUD
 

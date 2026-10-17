@@ -1,36 +1,29 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
+import Alert from '../components/Alert';
+import EmptyState from '../components/EmptyState';
+import Loading from '../components/Loading';
+import PageHeader from '../components/PageHeader';
+import useApi from '../hooks/useApi';
+import usePageTitle from '../hooks/usePageTitle';
 
 export const thaiDate = (iso) => new Date(iso).toLocaleDateString('th-TH', { dateStyle: 'medium' });
 
 // หน้าบ้าน: รายการบทความที่เผยแพร่แล้ว (แม่แบบหน้า "รายการ")
 function Articles() {
+  usePageTitle('บทความ');
   const { token } = useAuth();
-  const [items, setItems] = useState(null); // null = ยังโหลดไม่เสร็จ
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false; // ออกจากหน้าก่อนโหลดเสร็จ ไม่ต้อง setState แล้ว
-    api
-      .listArticles(token)
-      .then((data) => !cancelled && setItems(data.items))
-      .catch((err) => !cancelled && setError(err.message));
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  if (error) return <p role="alert" className="text-red-700">{error}</p>;
-  if (!items) return <p>กำลังโหลด…</p>;
+  const { data, error, loading } = useApi(() => api.listArticles(token), [token]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">บทความ</h1>
-      {items.length === 0 && <p className="text-gray-600">ยังไม่มีบทความ</p>}
+    <div>
+      <PageHeader title="บทความ" />
+      {loading && !data && <Loading />}
+      {error && <Alert>{error.message}</Alert>}
+      {data?.items.length === 0 && <EmptyState message="ยังไม่มีบทความ" />}
       <ul className="space-y-3">
-        {items.map((a) => (
+        {data?.items.map((a) => (
           <li key={a.id} className="rounded-md border border-gray-200 bg-white p-4">
             <Link to={`/articles/${a.id}`} className="text-lg font-semibold text-teal-700 hover:underline">
               {a.title}

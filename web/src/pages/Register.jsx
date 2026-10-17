@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import Alert from '../components/Alert';
+import Button from '../components/Button';
 import Field from '../components/Field';
+import usePageTitle from '../hooks/usePageTitle';
 
 const empty = { email: '', password: '', confirm: '', displayName: '', phone: '' };
 
@@ -16,6 +19,7 @@ function validate(form) {
 }
 
 function Register() {
+  usePageTitle('สมัครสมาชิก');
   const { register, isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -91,18 +95,10 @@ function Register() {
           value={form.confirm}
           onChange={update}
         />
-        {error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={status === 'submitting'}
-          className="w-full rounded-md bg-teal-600 py-2 font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-        >
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" disabled={status === 'submitting'} className="w-full">
           {status === 'submitting' ? 'กำลังสมัคร…' : 'สมัครสมาชิก'}
-        </button>
+        </Button>
       </form>
       <p className="mt-4 text-center text-sm text-gray-600">
         มีบัญชีแล้ว?{' '}

@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import Alert from '../components/Alert';
+import Button from '../components/Button';
 import Field from '../components/Field';
+import usePageTitle from '../hooks/usePageTitle';
 
 function Login() {
-  const { login, isLoggedIn } = useAuth();
+  usePageTitle('เข้าสู่ระบบ');
+  const { login, isLoggedIn, notice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from ?? '/'; // ProtectedRoute ฝากไว้ว่าตั้งใจจะไปหน้าไหน
@@ -33,6 +37,8 @@ function Login() {
     <div className="mx-auto max-w-sm">
       <h1 className="mb-6 text-2xl font-bold">เข้าสู่ระบบ</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ถูกพาออกจากระบบเพราะตั๋วหมดอายุ บอกเหตุผล (ถ้ามี error ใหม่ โชว์ error แทน) */}
+        {notice && !error && <Alert type="info">{notice}</Alert>}
         <Field
           label="อีเมล"
           type="email"
@@ -49,18 +55,10 @@ function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={status === 'submitting'}
-          className="w-full rounded-md bg-teal-600 py-2 font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-        >
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" disabled={status === 'submitting'} className="w-full">
           {status === 'submitting' ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
-        </button>
+        </Button>
       </form>
       <p className="mt-4 text-center text-sm text-gray-600">
         ยังไม่มีบัญชี?{' '}

@@ -11,10 +11,13 @@ export function AuthProvider({ children }) {
   // อ่านค่าจาก localStorage ตอนเริ่ม refresh หน้าแล้วจะยัง login อยู่
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [member, setMember] = useState(() => JSON.parse(localStorage.getItem(MEMBER_KEY) || 'null'));
+  // ข้อความบอกเหตุผลที่ถูกพาออกจากระบบ หน้า Login เอาไปโชว์
+  const [notice, setNotice] = useState(null);
 
   function remember({ token, member }) {
     setToken(token);
     setMember(member);
+    setNotice(null);
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(MEMBER_KEY, JSON.stringify(member));
   }
@@ -26,7 +29,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(MEMBER_KEY);
   }
 
-  // token ใน localStorage อาจหมดอายุไปแล้ว (ตั๋วอยู่ได้ 1 ชั่วโมง) ถามเซิร์ฟเวอร์อีกที ถ้าได้ 401 ก็ออกจากระบบ
+  // ตั๋วอยู่ได้ 1 ชั่วโมง ถ้าหมดระหว่างใช้งาน คำขอไหนได้ 401 ก็ออกจากระบบตรงนี้ที่เดียว
+  // หน้าที่ต้อง login (ProtectedRoute) จะพาไป /login เอง แล้วกลับมาหน้าเดิมหลัง login ใหม่
+  useEffect(() => {
+    api.setUnauthorizedHandler(() => {
+      logout();
+      setNotice('หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่');
+    });
+    return () => api.setUnauthorizedHandler(null);
+    // logout ใช้แค่ setter ที่คงที่อยู่แล้ว ลงทะเบียนครั้งเดียวพอ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // token ใน localStorage อาจหมดอายุไปแล้วตั้งแต่ปิดเว็บ ถามเซิร์ฟเวอร์อีกที (ได้ 401 → handler ข้างบนจัดการ)
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -37,14 +52,10 @@ export function AuthProvider({ children }) {
         setMember(m);
         localStorage.setItem(MEMBER_KEY, JSON.stringify(m));
       })
-      .catch((err) => {
-        if (!cancelled && err.status === 401) logout();
-      });
+      .catch(() => {}); // error อื่น เช่น เน็ตหลุด ใช้ข้อมูลเดิมใน localStorage ไปก่อน
     return () => {
       cancelled = true;
     };
-    // ถามใหม่เฉพาะตอน token เปลี่ยน logout ใช้แค่ setter ที่คงที่อยู่แล้ว
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   async function login(email, password) {
@@ -57,7 +68,13 @@ export function AuthProvider({ children }) {
     await login(form.email, form.password); // สมัครเสร็จ login ให้เลย
   }
 
-  const value = { token, member, isLoggedIn: Boolean(token), login, register, logout };
+  // กดออกจากระบบเอง ไม่ต้องมีข้อความเตือน
+  function signOut() {
+    logout();
+    setNotice(null);
+  }
+
+  const value = { token, member, isLoggedIn: Boolean(token), notice, login, register, logout: signOut };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

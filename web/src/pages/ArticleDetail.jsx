@@ -1,44 +1,39 @@
-import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
+import Alert from '../components/Alert';
+import Loading from '../components/Loading';
+import useApi from '../hooks/useApi';
+import usePageTitle from '../hooks/usePageTitle';
 import { thaiDate } from './Articles';
 
 // หน้าบ้าน: อ่านบทความหนึ่งเรื่อง (แม่แบบหน้า "รายละเอียด") id มาจาก URL /articles/:id
 function ArticleDetail() {
   const { id } = useParams();
   const { token } = useAuth();
-  const [article, setArticle] = useState(null);
-  const [error, setError] = useState(null);
+  const { data: article, error, loading } = useApi(() => api.getArticle(id, token), [id, token]);
+  usePageTitle(article?.title ?? 'บทความ');
 
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .getArticle(id, token)
-      .then((a) => !cancelled && setArticle(a))
-      .catch((err) => !cancelled && setError(err.message)); // ฉบับร่างหรือไม่มี → "ไม่พบรายการนี้"
-    return () => {
-      cancelled = true;
-    };
-  }, [id, token]);
+  const back = (
+    <Link to="/articles" className="text-sm text-teal-700 hover:underline">
+      ← บทความทั้งหมด
+    </Link>
+  );
 
+  if (loading) return <Loading />;
   if (error) {
+    // ฉบับร่างหรือไม่มี server ตอบ 404 "ไม่พบรายการนี้"
     return (
-      <p role="alert" className="text-red-700">
-        {error}{' '}
-        <Link to="/articles" className="text-teal-700 hover:underline">
-          กลับไปหน้ารายการ
-        </Link>
-      </p>
+      <div className="space-y-4">
+        {back}
+        <Alert>{error.message}</Alert>
+      </div>
     );
   }
-  if (!article) return <p>กำลังโหลด…</p>;
 
   return (
     <article className="space-y-4">
-      <Link to="/articles" className="text-sm text-teal-700 hover:underline">
-        ← บทความทั้งหมด
-      </Link>
+      {back}
       {article.coverUrl && <img src={article.coverUrl} alt="" className="w-full rounded-md object-cover" />}
       <h1 className="text-2xl font-bold">{article.title}</h1>
       <p className="text-sm text-gray-500">

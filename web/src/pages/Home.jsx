@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { APP_NAME } from '../config';
+import usePageTitle from '../hooks/usePageTitle';
 
 function Home() {
+  usePageTitle(); // หน้าแรก ชื่อแท็บเป็นชื่อแอปอย่างเดียว
   const { isLoggedIn, member } = useAuth();
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">PetFinder</h1>
+      <h1 className="text-2xl font-bold">{APP_NAME}</h1>
       {isLoggedIn ? (
         <p>
           สวัสดี {member?.displayName}{' '}
