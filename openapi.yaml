@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: PetFinder API
+  title: TremProject Seat Booking API
   description: |
-    สัญญา API ของระบบตามหาสัตว์หาย + หาบ้านใหม่ สำหรับทีม React
+    สัญญา API ของระบบจองที่นั่งรถทัวร์ / รถตู้
     วิชา 520342 Server Side Web Programming
 
     **กติการ่วมของทุกเส้นทาง**
@@ -11,12 +11,19 @@ info:
     - เส้นทางที่มีรูปกุญแจต้องแนบ `Authorization: Bearer <token>` ที่ได้จาก login (อายุ 1 ชั่วโมง)
     - ข้อผิดพลาดทุกกรณีมีหน้าตาเดียวกัน `{"error": {"code": "...", "message": "..."}}`
       ให้หน้าเว็บตัดสินใจจาก `code` และแสดง `message` (ภาษาไทย) ให้ผู้ใช้
-    - แก้หรือลบของคนอื่นไม่ได้ ระบบจะตอบ 404 เหมือนหาไม่เจอ (ไม่บอกว่ามีของชิ้นนั้นอยู่)
+    - ดูหรือยกเลิกการจองของคนอื่นไม่ได้ ระบบจะตอบ 404 เหมือนหาไม่เจอ (ไม่บอกว่ามีการจองนั้นอยู่)
+    - เวลาส่งและรับเป็น ISO 8601 พร้อม offset ส่วน `date=YYYY-MM-DD` ใช้วันตามเวลาไทย (Asia/Bangkok)
+    - เงินเป็นบาทจำนวนเต็ม (`priceBaht`, `totalBaht`)
 
-    **บทบาท** member (สมัครเองได้), rescuer (มูลนิธิ/ชมรมที่แอดมินยืนยันแล้ว), admin
+    **บทบาท** member (ผู้โดยสาร สมัครเองได้), staff (พนักงาน แอดมินแต่งตั้ง), admin
+
+    **ที่นั่งแบบสด (WebSocket)** หน้าเลือกที่นั่งต่อ `GET /api/trips/{id}/live` แบบ WebSocket
+    เซิร์ฟเวอร์ส่ง `{"type": "seats", "tripId": 1, "taken": [1, 2, 5]}` ทันทีที่ต่อสำเร็จ
+    และทุกครั้งที่มีคนจองหรือยกเลิกในรอบนั้น (ส่งรายการที่ไม่ว่างทั้งหมด หน้าเว็บวาดผังใหม่ได้เลย)
+    หน้าเว็บไม่ต้องส่งอะไรกลับ การจองยังทำผ่าน `POST /api/bookings` เหมือนเดิม
 
     **เฟสงาน** ดูได้จาก tag ของแต่ละเส้นทาง
-  version: 1.0.0
+  version: 2.0.0
 servers:
   - url: http://localhost:8080
     description: เซิร์ฟเวอร์ Go บนเครื่องตัวเอง
@@ -25,19 +32,19 @@ servers:
 
 tags:
   - name: Auth
-    description: "เฟส 2 — สมัครสมาชิก เข้าสู่ระบบ ข้อมูลของฉัน"
-  - name: Reference
-    description: "เฟส 1 — ข้อมูลหลักสำหรับดรอปดาวน์ (ชนิดสัตว์ พื้นที่)"
-  - name: Lost
-    description: "เฟส 1 — ประกาศสัตว์หายและการแจ้งพบเห็น"
-  - name: Found
-    description: "เฟส 1 — ประกาศพบสัตว์หลง คืนเจ้าของ หรือย้ายไปหาบ้าน"
-  - name: Adoption
-    description: "เฟส 3 — ประกาศหาบ้านใหม่ คำขอรับเลี้ยง และติดตามผล"
+    description: "ทำแล้ว — สมัครสมาชิก เข้าสู่ระบบ ข้อมูลของฉัน"
+  - name: Trips
+    description: "เฟส 1 — เส้นทาง ค้นหารอบรถ ผังที่นั่ง"
+  - name: Bookings
+    description: "เฟส 1 — จองที่นั่ง การจองของฉัน ยกเลิก"
+  - name: Live
+    description: "เฟส 3 — ผังที่นั่งอัปเดตสดผ่าน WebSocket"
   - name: Articles
-    description: "เฟส 1 — บทความหน้าบ้าน"
+    description: "ทำแล้ว — ข่าว/ประกาศหน้าบ้าน"
+  - name: Staff
+    description: "เฟส 2 — หลังบ้านจัดการรอบรถและรายชื่อผู้โดยสาร (staff หรือ admin)"
   - name: Admin
-    description: "เฟส 2 — หลังบ้าน เฉพาะ admin"
+    description: "หลังบ้าน เฉพาะ admin (สมาชิก บทความ ทำแล้ว / เส้นทาง คันรถ เฟส 2)"
 
 paths:
   # ===================================================================
@@ -127,211 +134,36 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /api/me/lost-reports:
+  /api/me/bookings:
     get:
-      tags: [Auth]
-      summary: ประกาศสัตว์หายของฉัน
+      tags: [Bookings]
+      summary: การจองของฉัน ใหม่สุดก่อน (รวมที่ยกเลิกแล้วและรอบที่ออกไปแล้ว)
       security:
         - bearerAuth: []
-      responses:
-        "200":
-          description: ประกาศทุกสถานะที่ฉันโพสต์ ใหม่สุดก่อน
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LostReportList"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  /api/me/found-reports:
-    get:
-      tags: [Auth]
-      summary: ประกาศพบสัตว์หลงของฉัน
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: ประกาศทุกสถานะที่ฉันโพสต์ ใหม่สุดก่อน
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReportList"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  /api/me/adoption-requests:
-    get:
-      tags: [Auth]
-      summary: คำขอรับเลี้ยงที่ฉันยื่น
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: คำขอทุกสถานะ ใหม่สุดก่อน
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionRequestList"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  # ===================================================================
-  # Reference
-  # ===================================================================
-  /api/species:
-    get:
-      tags: [Reference]
-      summary: รายการชนิดสัตว์
-      responses:
-        "200":
-          description: ชนิดสัตว์ทั้งหมด
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Species"
-
-  /api/areas:
-    get:
-      tags: [Reference]
-      summary: รายการพื้นที่
-      responses:
-        "200":
-          description: พื้นที่ทั้งหมด
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Area"
-
-  # ===================================================================
-  # Lost
-  # ===================================================================
-  /api/lost-reports:
-    get:
-      tags: [Lost]
-      summary: ค้นหาประกาศสัตว์หาย
       parameters:
-        - $ref: "#/components/parameters/SpeciesFilter"
-        - $ref: "#/components/parameters/AreaFilter"
-        - name: status
-          in: query
-          description: ไม่ส่งมา = เฉพาะ lost (ยังหาอยู่)
-          schema:
-            type: string
-            enum: [lost, reunited, closed]
+        - $ref: "#/components/parameters/Page"
       responses:
         "200":
-          description: ประกาศที่ตรงเงื่อนไข ใหม่สุดก่อน
+          description: การจองของเจ้าของตั๋ว
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LostReportList"
+                $ref: "#/components/schemas/BookingList"
         "400":
           $ref: "#/components/responses/BadFilter"
-    post:
-      tags: [Lost]
-      summary: ประกาศสัตว์หาย
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewLostReport"
-      responses:
-        "201":
-          description: สร้างประกาศแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LostReport"
-        "400":
-          $ref: "#/components/responses/MissingField"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /api/lost-reports/{id}:
-    parameters:
-      - $ref: "#/components/parameters/Id"
+  # ===================================================================
+  # Trips
+  # ===================================================================
+  /api/routes:
     get:
-      tags: [Lost]
-      summary: ดูประกาศสัตว์หายหนึ่งรายการ
-      description: ถ้าแนบตั๋วมาด้วย จะเห็นเบอร์โทรของเจ้าของใน `owner.phone` ถ้าไม่แนบจะเป็น null
+      tags: [Trips]
+      summary: เส้นทางทั้งหมด (ไว้ทำดรอปดาวน์ ต้นทาง → ปลายทาง)
       responses:
         "200":
-          description: ประกาศที่ขอ
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LostReport"
-        "400":
-          $ref: "#/components/responses/BadID"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    patch:
-      tags: [Lost]
-      summary: เปลี่ยนสถานะประกาศ (เจ้าของหรือแอดมิน)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [reunited, closed]
-                  example: reunited
-      responses:
-        "200":
-          description: สถานะใหม่
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LostReport"
-        "400":
-          $ref: "#/components/responses/BadStatus"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    delete:
-      tags: [Lost]
-      summary: ลบประกาศ (เจ้าของหรือแอดมิน)
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: ลบแล้ว
-        "400":
-          $ref: "#/components/responses/BadID"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /api/lost-reports/{id}/sightings:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    get:
-      tags: [Lost]
-      summary: รายการแจ้งพบเห็นของประกาศนี้
-      responses:
-        "200":
-          description: การพบเห็น ล่าสุดก่อน
+          description: เส้นทาง เรียงตาม id
           content:
             application/json:
               schema:
@@ -340,487 +172,19 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Sighting"
-        "400":
-          $ref: "#/components/responses/BadID"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    post:
-      tags: [Lost]
-      summary: แจ้งว่าพบเห็นสัตว์ตัวนี้
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewSighting"
-      responses:
-        "201":
-          description: บันทึกการพบเห็นแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Sighting"
-        "400":
-          $ref: "#/components/responses/MissingField"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: ประกาศนี้ปิดแล้ว ไม่รับแจ้งพบเห็นเพิ่ม
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: REPORT_CLOSED
-                  message: ประกาศนี้ปิดแล้ว
+                      $ref: "#/components/schemas/Route"
 
-  /api/lost-reports/{id}/matches:
-    parameters:
-      - $ref: "#/components/parameters/Id"
+  /api/trips:
     get:
-      tags: [Lost]
-      summary: สัตว์หลงที่อาจเป็นตัวเดียวกัน
-      description: |
-        จับคู่จาก found_reports ที่ยังรอเจ้าของ (waiting_owner) โดย
-        ชนิดเดียวกัน + พื้นที่เดียวกัน + พบหลังวันที่หาย
-        เรียงจากสีตรงกันก่อน แล้วตามด้วยวันที่พบใกล้วันที่หายที่สุด
-      responses:
-        "200":
-          description: ผู้สมัครที่อาจตรง (อาจว่างเปล่า)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReportList"
-        "400":
-          $ref: "#/components/responses/BadID"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  # ===================================================================
-  # Found
-  # ===================================================================
-  /api/found-reports:
-    get:
-      tags: [Found]
-      summary: ค้นหาประกาศพบสัตว์หลง
+      tags: [Trips]
+      summary: ค้นหารอบรถที่ยังเปิดขาย (ยังไม่ออก และไม่ถูกยกเลิก) เรียงตามเวลาออก
       parameters:
-        - $ref: "#/components/parameters/SpeciesFilter"
-        - $ref: "#/components/parameters/AreaFilter"
-        - name: status
-          in: query
-          description: ไม่ส่งมา = เฉพาะ waiting_owner (รอเจ้าของ)
-          schema:
-            type: string
-            enum: [waiting_owner, returned, for_adoption]
+        - $ref: "#/components/parameters/RouteFilter"
+        - $ref: "#/components/parameters/DateFilter"
       responses:
         "200":
-          description: ประกาศที่ตรงเงื่อนไข ใหม่สุดก่อน
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReportList"
-        "400":
-          $ref: "#/components/responses/BadFilter"
-    post:
-      tags: [Found]
-      summary: ประกาศว่าเก็บสัตว์หลงได้
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewFoundReport"
-      responses:
-        "201":
-          description: สร้างประกาศแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReport"
-        "400":
-          $ref: "#/components/responses/MissingField"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-  /api/found-reports/{id}:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    get:
-      tags: [Found]
-      summary: ดูประกาศพบสัตว์หลงหนึ่งรายการ
-      description: ถ้าแนบตั๋วมาด้วย จะเห็นเบอร์โทรของผู้พบใน `finder.phone`
-      responses:
-        "200":
-          description: ประกาศที่ขอ
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReport"
-        "400":
-          $ref: "#/components/responses/BadID"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    delete:
-      tags: [Found]
-      summary: ลบประกาศ (ผู้พบหรือแอดมิน)
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: ลบแล้ว
-        "400":
-          $ref: "#/components/responses/BadID"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /api/found-reports/{id}/return:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    post:
-      tags: [Found]
-      summary: บันทึกว่าคืนเจ้าของแล้ว (ผู้พบหรือแอดมิน)
-      description: |
-        ทำใน transaction เดียว: found_report → returned และ lost_report ที่ระบุ → reunited
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [lostReportId]
-              properties:
-                lostReportId:
-                  type: integer
-                  example: 1
-      responses:
-        "200":
-          description: คืนเจ้าของเรียบร้อย
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FoundReport"
-        "400":
-          $ref: "#/components/responses/MissingField"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: ประกาศนี้ไม่ได้อยู่ในสถานะรอเจ้าของ หรือประกาศหายไม่ได้อยู่ในสถานะ lost
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: WRONG_STATUS
-                  message: สถานะของประกาศไม่อนุญาตให้ทำรายการนี้
-
-  /api/found-reports/{id}/to-adoption:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    post:
-      tags: [Found, Adoption]
-      summary: ย้ายสัตว์หลงไปประกาศหาบ้าน (rescuer หรือ admin)
-      description: |
-        ทำได้เมื่อรอเจ้าของมาแล้วอย่างน้อย 14 วัน
-        ใน transaction เดียว: found_report → for_adoption และสร้าง adoption_listing ใหม่
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ToAdoptionRequest"
-      responses:
-        "201":
-          description: สร้างประกาศหาบ้านแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionListing"
-        "400":
-          $ref: "#/components/responses/MissingField"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: ยังไม่ครบ 14 วัน หรือสถานะไม่ใช่ waiting_owner
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: TOO_EARLY
-                  message: ต้องรอเจ้าของครบ 14 วันก่อนย้ายไปหาบ้านใหม่
-
-  # ===================================================================
-  # Adoption
-  # ===================================================================
-  /api/adoptions:
-    get:
-      tags: [Adoption]
-      summary: ค้นหาสัตว์ที่รอบ้านใหม่
-      parameters:
-        - $ref: "#/components/parameters/SpeciesFilter"
-        - $ref: "#/components/parameters/AreaFilter"
-        - name: status
-          in: query
-          description: ไม่ส่งมา = เฉพาะ open
-          schema:
-            type: string
-            enum: [open, pending, adopted, closed]
-      responses:
-        "200":
-          description: ประกาศที่ตรงเงื่อนไข ใหม่สุดก่อน
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionListingList"
-        "400":
-          $ref: "#/components/responses/BadFilter"
-    post:
-      tags: [Adoption]
-      summary: สร้างประกาศหาบ้าน (rescuer หรือ admin)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewAdoptionListing"
-      responses:
-        "201":
-          description: สร้างประกาศแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionListing"
-        "400":
-          $ref: "#/components/responses/MissingField"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-
-  /api/adoptions/{id}:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    get:
-      tags: [Adoption]
-      summary: ดูประกาศหาบ้านหนึ่งรายการ
-      responses:
-        "200":
-          description: ประกาศที่ขอ
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionListing"
-        "400":
-          $ref: "#/components/responses/BadID"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    patch:
-      tags: [Adoption]
-      summary: แก้ไขประกาศ หรือปิดเป็น adopted/closed (rescuer เจ้าของประกาศหรือแอดมิน)
-      description: ส่งมาเฉพาะฟิลด์ที่ต้องการแก้ ฟิลด์ที่ไม่ส่งจะคงค่าเดิม
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdoptionListingPatch"
-      responses:
-        "200":
-          description: ประกาศหลังแก้ไข
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionListing"
-        "400":
-          $ref: "#/components/responses/BadStatus"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: เปลี่ยนเป็น adopted ได้เฉพาะประกาศที่มีคำขออนุมัติแล้ว (pending)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: WRONG_STATUS
-                  message: สถานะของประกาศไม่อนุญาตให้ทำรายการนี้
-
-  /api/adoptions/{id}/requests:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    get:
-      tags: [Adoption]
-      summary: คำขอรับเลี้ยงของประกาศนี้ (rescuer เจ้าของประกาศหรือแอดมิน)
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: คำขอทุกสถานะ เก่าสุดก่อน (ใครมาก่อนได้พิจารณาก่อน)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionRequestList"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-    post:
-      tags: [Adoption]
-      summary: ยื่นขอรับเลี้ยง พร้อมแบบประเมิน
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewAdoptionRequest"
-      responses:
-        "201":
-          description: ยื่นคำขอแล้ว สถานะ pending
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionRequest"
-        "400":
-          description: ข้อมูลแบบประเมินไม่ครบ (MISSING_FIELD, MESSAGE_TOO_SHORT)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: MESSAGE_TOO_SHORT
-                  message: เหตุผลที่อยากรับเลี้ยงต้องยาวอย่างน้อย 20 ตัวอักษร
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: เคยยื่นขอตัวนี้แล้ว (ALREADY_REQUESTED) หรือประกาศไม่เปิดรับแล้ว (LISTING_NOT_OPEN)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: ALREADY_REQUESTED
-                  message: คุณยื่นขอรับเลี้ยงตัวนี้ไปแล้ว
-
-  /api/adoption-requests/{id}/approve:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    post:
-      tags: [Adoption]
-      summary: อนุมัติคำขอ (rescuer เจ้าของประกาศหรือแอดมิน)
-      description: |
-        ทำใน transaction เดียว:
-        1. คำขอนี้ → approved (ฐานข้อมูลบังคับว่าอนุมัติได้ใบเดียวต่อสัตว์หนึ่งตัว)
-        2. คำขออื่นที่ยัง pending ของตัวเดียวกัน → rejected
-        3. ประกาศ → pending (รอส่งมอบ)
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: อนุมัติแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          description: สัตว์ตัวนี้มีคำขอที่อนุมัติไปแล้ว หรือคำขอนี้ไม่ได้อยู่ในสถานะ pending
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-              example:
-                error:
-                  code: ALREADY_APPROVED
-                  message: สัตว์ตัวนี้มีผู้รับเลี้ยงที่อนุมัติแล้ว
-
-  /api/adoption-requests/{id}/reject:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    post:
-      tags: [Adoption]
-      summary: ปฏิเสธคำขอ (rescuer เจ้าของประกาศหรือแอดมิน)
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: ปฏิเสธแล้ว
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdoptionRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/WrongStatus"
-
-  /api/adoption-requests/{id}:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    delete:
-      tags: [Adoption]
-      summary: ถอนคำขอของฉัน (ทำได้เฉพาะตอน pending)
-      description: ไม่ได้ลบแถวจริง แต่เปลี่ยนสถานะเป็น withdrawn เพื่อเก็บประวัติ
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: ถอนแล้ว
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/WrongStatus"
-
-  /api/adoption-requests/{id}/updates:
-    parameters:
-      - $ref: "#/components/parameters/Id"
-    get:
-      tags: [Adoption]
-      summary: อัปเดตหลังรับเลี้ยง (สาธารณะ ให้คนเห็นว่าน้องได้บ้านที่ดี)
-      responses:
-        "200":
-          description: อัปเดต ใหม่สุดก่อน
+          description: |
+            รอบรถที่ตรงเงื่อนไข ไม่ส่ง date = ทุกรอบตั้งแต่ตอนนี้ไป (สูงสุด 50 รอบ)
           content:
             application/json:
               schema:
@@ -829,12 +193,77 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: "#/components/schemas/AdoptionUpdate"
+                      $ref: "#/components/schemas/Trip"
+        "400":
+          $ref: "#/components/responses/BadFilter"
+
+  /api/trips/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Trips]
+      summary: รอบรถหนึ่งรอบ (รวมรอบที่ยกเลิกหรือออกไปแล้ว ไว้ให้หน้าตั๋วย้อนดูได้)
+      responses:
+        "200":
+          description: รอบรถที่ขอ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          $ref: "#/components/responses/BadID"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /api/trips/{id}/seats:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Trips]
+      summary: ผังที่นั่งของรอบ บอกเฉพาะเลขที่ไม่ว่าง ไม่บอกว่าใครจอง
+      description: |
+        หน้าเว็บวาดที่นั่ง 1..seatCount ตาม kind (van 3 ที่ต่อแถว, bus 2+2 มีทางเดินกลาง)
+        แล้วทำเครื่องหมายเลขที่อยู่ใน taken ว่าไม่ว่าง
+      responses:
+        "200":
+          description: ผังที่นั่ง
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeatMap"
+        "400":
+          $ref: "#/components/responses/BadID"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/trips/{id}/live:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Live]
+      summary: "WebSocket: ผังที่นั่งแบบสด (ไม่ต้องเข้าสู่ระบบ)"
+      description: |
+        ต่อด้วย `new WebSocket("ws://<host>/api/trips/1/live")` (บน https ใช้ `wss://`)
+        ข้อความจากเซิร์ฟเวอร์มีแบบเดียว คือ SeatMap ที่มี `"type": "seats"` เพิ่มมา
+        ส่งครั้งแรกทันทีที่ต่อสำเร็จ และส่งใหม่ทุกครั้งที่มีคนจอง/ยกเลิกในรอบนี้
+      responses:
+        "101":
+          description: เปลี่ยนเป็น WebSocket สำเร็จ
+        "400":
+          $ref: "#/components/responses/BadID"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ===================================================================
+  # Bookings
+  # ===================================================================
+  /api/bookings:
     post:
-      tags: [Adoption]
-      summary: ส่งอัปเดตน้อง (เฉพาะผู้รับเลี้ยงที่คำขอ approved)
+      tags: [Bookings]
+      summary: จองที่นั่ง (ได้ทีเดียวหลายที่ ในรอบเดียวกัน)
+      description: |
+        ทำทั้งหมดใน transaction เดียว ถ้าที่นั่งใดที่นั่งหนึ่งไม่ว่าง จะไม่จองให้สักที่
+        ถ้าสองคนกดที่นั่งเดียวกันพร้อมกัน ฐานข้อมูลรับแค่คนแรก คนที่สองได้ 409 SEAT_TAKEN
       security:
         - bearerAuth: []
       requestBody:
@@ -842,28 +271,107 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [note]
-              properties:
-                note:
-                  type: string
-                  example: ครบ 1 เดือน กินเก่ง นอนบนโซฟาทุกวัน
-                photoUrl:
-                  type: string
-                  nullable: true
+              $ref: "#/components/schemas/NewBooking"
       responses:
         "201":
-          description: บันทึกอัปเดตแล้ว
+          description: จองสำเร็จ
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdoptionUpdate"
+                $ref: "#/components/schemas/Booking"
         "400":
-          $ref: "#/components/responses/MissingField"
+          description: |
+            ข้อมูลผิด (BAD_JSON, MISSING_FIELD) หรือรายการที่นั่งผิด BAD_SEATS
+            (ว่าง, เกิน 10 ที่, เลขซ้ำกัน, เลขเกินจำนวนที่นั่งของรถ)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: BAD_SEATS
+                  message: รถคันนี้มีที่นั่ง 1–13
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: ไม่พบรอบรถ (tripId ไม่มีอยู่)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: ไม่พบรายการนี้
+        "409":
+          description: |
+            SEAT_TAKEN มีที่นั่งถูกจองไปแล้ว (โหลดผังใหม่แล้วเลือกใหม่)
+            TRIP_CLOSED รอบนี้ถูกยกเลิกหรือออกไปแล้ว
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: SEAT_TAKEN
+                  message: ที่นั่ง 5 มีคนจองแล้ว
+
+  /api/bookings/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Bookings]
+      summary: การจองหนึ่งรายการ (ใช้แสดงหน้าตั๋ว) ของคนอื่นตอบ 404 ยกเว้น staff/admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: การจองที่ขอ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          $ref: "#/components/responses/BadID"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /api/bookings/{id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Bookings]
+      summary: ยกเลิกการจองของฉัน ที่นั่งกลับมาว่างให้คนอื่นจองทันที
+      description: ยกเลิกได้จนถึงเวลารถออก
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: การจองหลังยกเลิก (status = cancelled)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          $ref: "#/components/responses/BadID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            WRONG_STATUS ยกเลิกไปแล้ว
+            TRIP_CLOSED รถออกไปแล้ว ยกเลิกไม่ได้
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: TRIP_CLOSED
+                  message: รถออกไปแล้ว ยกเลิกไม่ได้
 
   # ===================================================================
   # Articles
@@ -904,6 +412,195 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # ===================================================================
+  # Staff (staff หรือ admin ไม่ใช่ตอบ 403)
+  # ===================================================================
+  /api/staff/trips:
+    get:
+      tags: [Staff]
+      summary: รอบรถทั้งหมด รวมที่ยกเลิกและออกไปแล้ว (แบ่งหน้า หน้าละ 20)
+      description: ส่ง date = เรียงตามเวลาออกของวันนั้น ไม่ส่ง = รอบที่ออกล่าสุดก่อน
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RouteFilter"
+        - $ref: "#/components/parameters/DateFilter"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: รอบรถ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripPage"
+        "400":
+          $ref: "#/components/responses/BadFilter"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Staff]
+      summary: เพิ่มรอบรถ
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewTrip"
+      responses:
+        "201":
+          description: สร้างแล้ว
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          description: |
+            ข้อมูลไม่ครบ (MISSING_FIELD), เวลาออกอยู่ในอดีต (BAD_TIME),
+            routeId หรือ vehicleId ไม่มีอยู่ (BAD_REF)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: BAD_TIME
+                  message: เวลาออกต้องเป็นเวลาในอนาคต
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/VehicleBusy"
+
+  /api/staff/trips/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      tags: [Staff]
+      summary: แก้เวลาออกหรือราคา (เปลี่ยนเส้นทาง/คันรถไม่ได้ ยกเลิกแล้วสร้างใหม่แทน)
+      description: เปลี่ยนราคาแล้วการจองเดิมยังจ่ายยอดเดิม (totalBaht เก็บไว้ตอนจอง)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripPatch"
+      responses:
+        "200":
+          description: รอบรถหลังแก้ไข
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          description: ข้อมูลไม่ครบ (MISSING_FIELD) หรือเวลาออกอยู่ในอดีต (BAD_TIME)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: TRIP_CLOSED รอบถูกยกเลิกหรือออกไปแล้ว / VEHICLE_BUSY รถคันนี้มีรอบเวลานั้นแล้ว
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/staff/trips/{id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Staff]
+      summary: ยกเลิกรอบรถ การจองทุกรายการในรอบนี้ถูกยกเลิกไปด้วย (ใน transaction เดียว)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: รอบรถหลังยกเลิก (status = cancelled, seatsLeft = seatCount)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          $ref: "#/components/responses/BadID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: TRIP_CLOSED ยกเลิกไปแล้วหรือรถออกไปแล้ว
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/staff/trips/{id}/passengers:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Staff]
+      summary: รายชื่อผู้โดยสารของรอบ (การจองที่ยังไม่ยกเลิก เรียงตามที่นั่งแรก)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: รอบรถ + รายชื่อ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip:
+                    $ref: "#/components/schemas/Trip"
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Passenger"
+        "400":
+          $ref: "#/components/responses/BadID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/staff/vehicles:
+    get:
+      tags: [Staff]
+      summary: คันรถทั้งหมด (ไว้ทำดรอปดาวน์ตอนเพิ่มรอบ)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: คันรถ เรียงตาม id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Vehicle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ===================================================================
   # Admin (ทุกเส้นทางต้องเป็น admin ไม่ใช่ตอบ 403)
   # ===================================================================
   /api/admin/members:
@@ -934,7 +631,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     put:
       tags: [Admin]
-      summary: เปลี่ยนบทบาทสมาชิก เช่น ยืนยันมูลนิธิเป็น rescuer
+      summary: เปลี่ยนบทบาทสมาชิก เช่น แต่งตั้งพนักงานเป็น staff
       description: |
         สมาชิกต้องเข้าสู่ระบบใหม่ บทบาทในตั๋วถึงจะเปลี่ยน
         แอดมินเปลี่ยนบทบาทตัวเองไม่ได้ (กันไม่ให้ระบบไม่เหลือแอดมิน)
@@ -950,8 +647,8 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [member, rescuer, admin]
-                  example: rescuer
+                  enum: [member, staff, admin]
+                  example: staff
       responses:
         "200":
           description: บทบาทใหม่
@@ -978,10 +675,10 @@ paths:
                   code: CANNOT_CHANGE_SELF
                   message: เปลี่ยนบทบาทของตัวเองไม่ได้
 
-  /api/admin/species:
+  /api/admin/routes:
     post:
       tags: [Admin]
-      summary: เพิ่มชนิดสัตว์
+      summary: เพิ่มเส้นทาง
       security:
         - bearerAuth: []
       requestBody:
@@ -989,22 +686,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [nameTh, nameEn]
-              properties:
-                nameTh:
-                  type: string
-                  example: นก
-                nameEn:
-                  type: string
-                  example: bird
+              $ref: "#/components/schemas/RouteInput"
       responses:
         "201":
           description: เพิ่มแล้ว
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Species"
+                $ref: "#/components/schemas/Route"
         "400":
           $ref: "#/components/responses/MissingField"
         "401":
@@ -1014,10 +703,12 @@ paths:
         "409":
           $ref: "#/components/responses/Duplicate"
 
-  /api/admin/areas:
-    post:
+  /api/admin/routes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
       tags: [Admin]
-      summary: เพิ่มพื้นที่
+      summary: แก้เส้นทาง (รอบรถที่ใช้เส้นทางนี้เห็นชื่อใหม่ทันที)
       security:
         - bearerAuth: []
       requestBody:
@@ -1025,19 +716,60 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                  example: อ.บางเลน
+              $ref: "#/components/schemas/RouteInput"
+      responses:
+        "200":
+          description: เส้นทางหลังแก้ไข
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Route"
+        "400":
+          $ref: "#/components/responses/MissingField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Duplicate"
+    delete:
+      tags: [Admin]
+      summary: ลบเส้นทาง (ลบได้เฉพาะเส้นทางที่ยังไม่เคยมีรอบรถ)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: ลบแล้ว
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/InUse"
+
+  /api/admin/vehicles:
+    post:
+      tags: [Admin]
+      summary: เพิ่มคันรถ
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleInput"
       responses:
         "201":
           description: เพิ่มแล้ว
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Area"
+                $ref: "#/components/schemas/Vehicle"
         "400":
           $ref: "#/components/responses/MissingField"
         "401":
@@ -1046,6 +778,64 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Duplicate"
+
+  /api/admin/vehicles/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      tags: [Admin]
+      summary: แก้คันรถ
+      description: |
+        ลดจำนวนที่นั่งไม่ได้ ถ้ารอบที่ยังไม่ออกมีคนจองเลขที่นั่งที่เกินจำนวนใหม่ (409 SEATS_IN_USE)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleInput"
+      responses:
+        "200":
+          description: คันรถหลังแก้ไข
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "400":
+          $ref: "#/components/responses/MissingField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: DUPLICATE ทะเบียนซ้ำ / SEATS_IN_USE ลดที่นั่งแล้วชนกับที่จองไว้
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: SEATS_IN_USE
+                  message: มีคนจองที่นั่งเลข 13 ในรอบที่ยังไม่ออก ลดจำนวนที่นั่งไม่ได้
+    delete:
+      tags: [Admin]
+      summary: ลบคันรถ (ลบได้เฉพาะคันที่ยังไม่เคยมีรอบรถ)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: ลบแล้ว
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/InUse"
 
   /api/admin/articles:
     get:
@@ -1175,20 +965,22 @@ components:
         type: integer
         minimum: 1
       example: 1
-    SpeciesFilter:
-      name: species
+    RouteFilter:
+      name: routeId
       in: query
-      description: กรองด้วย id ของชนิดสัตว์
+      description: กรองด้วย id ของเส้นทาง
       schema:
         type: integer
-      example: 2
-    AreaFilter:
-      name: area
-      in: query
-      description: กรองด้วย id ของพื้นที่
-      schema:
-        type: integer
+        minimum: 1
       example: 1
+    DateFilter:
+      name: date
+      in: query
+      description: วันที่ออกตามเวลาไทย รูปแบบ YYYY-MM-DD
+      schema:
+        type: string
+        format: date
+      example: "2026-10-21"
     Q:
       name: q
       in: query
@@ -1196,7 +988,7 @@ components:
       schema:
         type: string
         maxLength: 100
-      example: แมว
+      example: หัวหิน
     Page:
       name: page
       in: query
@@ -1299,7 +1091,7 @@ components:
               code: WRONG_STATUS
               message: สถานะของรายการไม่อนุญาตให้ทำรายการนี้
     Duplicate:
-      description: ชื่อนี้มีอยู่แล้ว
+      description: ข้อมูลซ้ำกับที่มีอยู่แล้ว (เส้นทางต้นทาง-ปลายทางเดิม หรือทะเบียนรถเดิม)
       content:
         application/json:
           schema:
@@ -1307,7 +1099,27 @@ components:
           example:
             error:
               code: DUPLICATE
-              message: ชื่อนี้มีอยู่แล้ว
+              message: ข้อมูลนี้มีอยู่แล้ว
+    InUse:
+      description: ยังมีข้อมูลอื่นอ้างถึงอยู่ ลบไม่ได้
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: IN_USE
+              message: มีรอบรถใช้รายการนี้อยู่ ลบไม่ได้
+    VehicleBusy:
+      description: รถคันนี้มีรอบออกเวลานั้นอยู่แล้ว
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: VEHICLE_BUSY
+              message: รถคันนี้มีรอบออกเวลานี้อยู่แล้ว
 
   schemas:
     Error:
@@ -1382,7 +1194,7 @@ components:
           example: "0898765432"
         role:
           type: string
-          enum: [member, rescuer, admin]
+          enum: [member, staff, admin]
           example: member
     Person:
       description: ข้อมูลคนโพสต์แบบย่อ phone เป็น null ถ้าคนดูยังไม่ได้เข้าสู่ระบบ
@@ -1399,486 +1211,254 @@ components:
           nullable: true
           example: "0898765432"
 
-    # ---------- Reference ----------
-    Species:
+    # ---------- Trips ----------
+    RouteInput:
       type: object
+      required: [origin, destination, durationMin]
       properties:
-        id:
+        origin:
+          type: string
+          maxLength: 100
+          example: กรุงเทพฯ (หมอชิต)
+        destination:
+          type: string
+          maxLength: 100
+          description: ต้องไม่ซ้ำกับต้นทาง
+          example: นครปฐม
+        durationMin:
           type: integer
-          example: 2
-        nameTh:
-          type: string
-          example: แมว
-        nameEn:
-          type: string
-          example: cat
-    Area:
+          minimum: 1
+          example: 60
+    Route:
       type: object
       properties:
         id:
           type: integer
           example: 1
-        name:
+        origin:
           type: string
-          example: ม.ศิลปากร วิทยาเขตพระราชวังสนามจันทร์
-    Sex:
+          example: กรุงเทพฯ (หมอชิต)
+        destination:
+          type: string
+          example: นครปฐม
+        durationMin:
+          type: integer
+          description: เวลาเดินทางโดยประมาณ (นาที)
+          example: 60
+    VehicleKind:
       type: string
-      enum: [male, female, unknown]
-      example: male
-
-    # ---------- Lost ----------
-    NewLostReport:
+      enum: [van, bus]
+      description: van = รถตู้ (3 ที่ต่อแถว), bus = รถทัวร์ (2+2 มีทางเดินกลาง)
+      example: van
+    VehicleInput:
       type: object
-      required: [speciesId, areaId, petName, color, lastSeenAt]
+      required: [plate, kind, seatCount]
       properties:
-        speciesId:
+        plate:
+          type: string
+          example: 10-1234 กทม
+        kind:
+          $ref: "#/components/schemas/VehicleKind"
+        seatCount:
           type: integer
-          example: 2
-        areaId:
-          type: integer
-          example: 1
-        petName:
-          type: string
-          maxLength: 50
-          example: ส้มโอ
-        sex:
-          $ref: "#/components/schemas/Sex"
-        color:
-          type: string
-          example: ส้ม
-        description:
-          type: string
-          example: แมวส้มตัวใหญ่ ใส่ปลอกคอสีแดงมีกระดิ่ง
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        lastSeenAt:
-          type: string
-          format: date-time
-          example: "2026-10-12T18:30:00+07:00"
-    LostReport:
+          minimum: 1
+          maximum: 60
+          example: 13
+    Vehicle:
       type: object
       properties:
         id:
           type: integer
           example: 1
-        species:
-          $ref: "#/components/schemas/Species"
-        area:
-          $ref: "#/components/schemas/Area"
-        owner:
-          $ref: "#/components/schemas/Person"
-        petName:
+        plate:
           type: string
-          example: ส้มโอ
-        sex:
-          $ref: "#/components/schemas/Sex"
-        color:
-          type: string
-          example: ส้ม
-        description:
-          type: string
-          example: แมวส้มตัวใหญ่ ใส่ปลอกคอสีแดงมีกระดิ่ง
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        lastSeenAt:
-          type: string
-          format: date-time
-          example: "2026-10-12T18:30:00+07:00"
-        status:
-          type: string
-          enum: [lost, reunited, closed]
-          example: lost
-        sightingCount:
+          example: 10-1234 กทม
+        kind:
+          $ref: "#/components/schemas/VehicleKind"
+        seatCount:
           type: integer
-          example: 2
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-10-12T19:00:00+07:00"
-    LostReportList:
+          example: 13
+    NewTrip:
       type: object
+      required: [routeId, vehicleId, departAt, priceBaht]
       properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/LostReport"
-
-    NewSighting:
-      type: object
-      required: [areaId, seenAt]
-      properties:
-        areaId:
+        routeId:
           type: integer
           example: 1
-        seenAt:
-          type: string
-          format: date-time
-          example: "2026-10-13T12:10:00+07:00"
-        note:
-          type: string
-          example: เห็นแมวส้มปลอกคอแดงแถวโรงอาหารกลาง
-        photoUrl:
-          type: string
-          nullable: true
-        lat:
-          type: number
-          nullable: true
-          example: 13.8189
-        lng:
-          type: number
-          nullable: true
-          example: 100.0408
-    Sighting:
-      type: object
-      properties:
-        id:
+        vehicleId:
           type: integer
           example: 1
-        lostReportId:
-          type: integer
-          example: 1
-        reporter:
-          $ref: "#/components/schemas/Person"
-        area:
-          $ref: "#/components/schemas/Area"
-        seenAt:
+        departAt:
           type: string
           format: date-time
-          example: "2026-10-13T12:10:00+07:00"
-        note:
-          type: string
-          example: เห็นแมวส้มปลอกคอแดงแถวโรงอาหารกลาง
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        lat:
-          type: number
-          nullable: true
-          example: 13.8189
-        lng:
-          type: number
-          nullable: true
-          example: 100.0408
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-10-13T12:15:00+07:00"
-
-    # ---------- Found ----------
-    NewFoundReport:
-      type: object
-      required: [speciesId, areaId, color, foundAt]
-      properties:
-        speciesId:
-          type: integer
-          example: 2
-        areaId:
-          type: integer
-          example: 1
-        sex:
-          $ref: "#/components/schemas/Sex"
-        color:
-          type: string
-          example: ส้ม
-        description:
-          type: string
-          example: แมวส้มไม่มีปลอกคอ ผอม
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        foundAt:
-          type: string
-          format: date-time
-          example: "2026-10-14T08:00:00+07:00"
-    FoundReport:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 2
-        species:
-          $ref: "#/components/schemas/Species"
-        area:
-          $ref: "#/components/schemas/Area"
-        finder:
-          $ref: "#/components/schemas/Person"
-        sex:
-          $ref: "#/components/schemas/Sex"
-        color:
-          type: string
-          example: ส้ม
-        description:
-          type: string
-          example: แมวส้มไม่มีปลอกคอ ผอม
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        foundAt:
-          type: string
-          format: date-time
-          example: "2026-10-14T08:00:00+07:00"
-        status:
-          type: string
-          enum: [waiting_owner, returned, for_adoption]
-          example: waiting_owner
-        lostReportId:
-          type: integer
-          nullable: true
-          description: มีค่าเมื่อคืนเจ้าของแล้ว
-          example: null
-        daysWaiting:
-          type: integer
-          description: รอเจ้าของมาแล้วกี่วัน (ครบ 14 วันย้ายไปหาบ้านได้)
-          example: 1
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-10-14T08:30:00+07:00"
-    FoundReportList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/FoundReport"
-
-    # ---------- Adoption ----------
-    NewAdoptionListing:
-      type: object
-      required: [speciesId, areaId, petName]
-      properties:
-        speciesId:
-          type: integer
-          example: 2
-        areaId:
-          type: integer
-          example: 4
-        petName:
-          type: string
-          maxLength: 50
-          example: มะลิ
-        sex:
-          $ref: "#/components/schemas/Sex"
-        ageMonths:
-          type: integer
-          nullable: true
-          example: 3
-        sterilized:
-          type: boolean
-          example: false
-        vaccinated:
-          type: boolean
-          example: true
-        personality:
-          type: string
-          example: ขี้อ้อน ชอบเล่นลูกบอล
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-    ToAdoptionRequest:
-      description: ข้อมูลเพิ่มเติมตอนย้ายสัตว์หลงไปหาบ้าน (ชนิด พื้นที่ เพศ รูป ดึงจากประกาศพบเดิม)
-      type: object
-      required: [petName]
-      properties:
-        petName:
-          type: string
-          example: มะลิ
-        ageMonths:
-          type: integer
-          nullable: true
-          example: 3
-        sterilized:
-          type: boolean
-          example: false
-        vaccinated:
-          type: boolean
-          example: true
-        personality:
-          type: string
-          example: ขี้อ้อน ชอบเล่นลูกบอล
-    AdoptionListingPatch:
-      type: object
-      properties:
-        petName:
-          type: string
-        ageMonths:
-          type: integer
-          nullable: true
-        sterilized:
-          type: boolean
-        vaccinated:
-          type: boolean
-        personality:
-          type: string
-        photoUrl:
-          type: string
-          nullable: true
-        status:
-          type: string
-          enum: [adopted, closed]
-      example:
-        sterilized: true
-    AdoptionListing:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        species:
-          $ref: "#/components/schemas/Species"
-        area:
-          $ref: "#/components/schemas/Area"
-        rescuer:
-          $ref: "#/components/schemas/Person"
-        foundReportId:
-          type: integer
-          nullable: true
-          description: มีค่าเมื่อย้ายมาจากประกาศพบสัตว์หลง
-          example: 3
-        petName:
-          type: string
-          example: มะลิ
-        sex:
-          $ref: "#/components/schemas/Sex"
-        ageMonths:
-          type: integer
-          nullable: true
-          example: 3
-        sterilized:
-          type: boolean
-          example: false
-        vaccinated:
-          type: boolean
-          example: true
-        personality:
-          type: string
-          example: ขี้อ้อน ชอบเล่นลูกบอล
-        photoUrl:
-          type: string
-          nullable: true
-          example: null
-        status:
-          type: string
-          enum: [open, pending, adopted, closed]
-          example: open
-        requestCount:
-          type: integer
-          description: จำนวนคำขอที่ยัง pending
-          example: 2
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-10-01T10:00:00+07:00"
-    AdoptionListingList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdoptionListing"
-
-    NewAdoptionRequest:
-      type: object
-      required: [housingType, hoursAlone, message]
-      properties:
-        housingType:
-          type: string
-          enum: [house, condo, dorm, other]
-          example: condo
-        hasPets:
-          type: boolean
-          example: false
-        hasExperience:
-          type: boolean
-          example: true
-        hoursAlone:
+          example: "2026-10-21T07:00:00+07:00"
+        priceBaht:
           type: integer
           minimum: 0
-          maximum: 24
-          description: สัตว์ต้องอยู่ลำพังวันละกี่ชั่วโมง
-          example: 8
-        message:
+          example: 80
+    TripPatch:
+      type: object
+      required: [departAt, priceBaht]
+      properties:
+        departAt:
           type: string
-          minLength: 20
-          example: อยู่คอนโดที่อนุญาตให้เลี้ยงแมว เคยเลี้ยงแมวที่บ้านต่างจังหวัด
-    AdoptionRequest:
+          format: date-time
+          example: "2026-10-21T07:30:00+07:00"
+        priceBaht:
+          type: integer
+          minimum: 0
+          example: 90
+    Trip:
       type: object
       properties:
         id:
           type: integer
           example: 1
-        listingId:
+        route:
+          $ref: "#/components/schemas/Route"
+        vehicle:
+          $ref: "#/components/schemas/Vehicle"
+        departAt:
+          type: string
+          format: date-time
+          example: "2026-10-21T07:00:00+07:00"
+        arriveAt:
+          type: string
+          format: date-time
+          description: departAt + route.durationMin (ประมาณการ)
+          example: "2026-10-21T08:00:00+07:00"
+        priceBaht:
           type: integer
-          example: 1
-        petName:
-          type: string
-          example: มะลิ
-        applicant:
-          $ref: "#/components/schemas/Person"
-        housingType:
-          type: string
-          enum: [house, condo, dorm, other]
-          example: condo
-        hasPets:
-          type: boolean
-          example: false
-        hasExperience:
-          type: boolean
-          example: true
-        hoursAlone:
-          type: integer
-          example: 8
-        message:
-          type: string
-          example: อยู่คอนโดที่อนุญาตให้เลี้ยงแมว เคยเลี้ยงแมวที่บ้านต่างจังหวัด
+          example: 80
         status:
           type: string
-          enum: [pending, approved, rejected, withdrawn]
-          example: pending
-        decidedAt:
-          type: string
-          format: date-time
-          nullable: true
-          example: null
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-10-14T09:00:00+07:00"
-    AdoptionRequestList:
+          enum: [scheduled, cancelled]
+          example: scheduled
+        departed:
+          type: boolean
+          description: true = เลยเวลาออกแล้ว จองหรือยกเลิกไม่ได้
+          example: false
+        seatsLeft:
+          type: integer
+          example: 10
+    TripPage:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AdoptionRequest"
-    AdoptionUpdate:
+            $ref: "#/components/schemas/Trip"
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 7
+    SeatMap:
+      type: object
+      properties:
+        tripId:
+          type: integer
+          example: 1
+        kind:
+          $ref: "#/components/schemas/VehicleKind"
+        seatCount:
+          type: integer
+          example: 13
+        taken:
+          type: array
+          description: เลขที่นั่งที่ไม่ว่าง เรียงจากน้อยไปมาก
+          items:
+            type: integer
+          example: [1, 2, 5]
+
+    # ---------- Bookings ----------
+    NewBooking:
+      type: object
+      required: [tripId, seats]
+      properties:
+        tripId:
+          type: integer
+          example: 1
+        seats:
+          type: array
+          minItems: 1
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+          example: [3, 4]
+    Booking:
       type: object
       properties:
         id:
           type: integer
           example: 1
-        requestId:
+        trip:
+          $ref: "#/components/schemas/Trip"
+        seats:
+          type: array
+          items:
+            type: integer
+          example: [1, 2]
+        totalBaht:
           type: integer
-          example: 5
-        note:
+          description: ราคาตอนจอง x จำนวนที่นั่ง
+          example: 160
+        status:
           type: string
-          example: ครบ 1 เดือน กินเก่ง นอนบนโซฟาทุกวัน
-        photoUrl:
+          enum: [confirmed, cancelled]
+          example: confirmed
+        cancelledAt:
           type: string
+          format: date-time
           nullable: true
           example: null
         createdAt:
           type: string
           format: date-time
-          example: "2026-10-05T20:00:00+07:00"
+          example: "2026-10-20T10:00:00+07:00"
+    BookingList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 2
+    Passenger:
+      description: หนึ่งการจองในรายชื่อผู้โดยสาร
+      type: object
+      properties:
+        bookingId:
+          type: integer
+          example: 1
+        member:
+          $ref: "#/components/schemas/Person"
+        seats:
+          type: array
+          items:
+            type: integer
+          example: [1, 2]
+        totalBaht:
+          type: integer
+          example: 160
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-10-20T10:00:00+07:00"
 
     # ---------- Articles ----------
     ArticleInput:
@@ -1888,10 +1468,10 @@ components:
         title:
           type: string
           maxLength: 200
-          example: สัตว์หาย ทำอะไรก่อนดี 5 ข้อแรก
+          example: เปิดเส้นทางใหม่ กรุงเทพฯ – หัวหิน
         body:
           type: string
-          example: เริ่มจากค้นรอบบ้านในรัศมี 500 เมตร ...
+          example: เริ่มให้บริการทุกวัน วันละ 2 รอบ ...
         coverUrl:
           type: string
           nullable: true
@@ -1910,10 +1490,10 @@ components:
           $ref: "#/components/schemas/Person"
         title:
           type: string
-          example: สัตว์หาย ทำอะไรก่อนดี 5 ข้อแรก
+          example: เปิดเส้นทางใหม่ กรุงเทพฯ – หัวหิน
         body:
           type: string
-          example: เริ่มจากค้นรอบบ้านในรัศมี 500 เมตร ...
+          example: เริ่มให้บริการทุกวัน วันละ 2 รอบ ...
         coverUrl:
           type: string
           nullable: true
