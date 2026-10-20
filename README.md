@@ -85,7 +85,9 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - รอบรถ: `GET /api/trips?routeId=&date=YYYY-MM-DD` (เฉพาะรอบที่ยังจองได้ วันที่ตามเวลาไทย), `GET /api/trips/{id}`,
   `GET /api/trips/{id}/seats` ผังที่นั่ง `{ kind, seatCount, taken }`
 - การจอง (ต้องเข้าสู่ระบบ): `POST /api/bookings` `{ tripId, seats }` ทำใน transaction ที่นั่งไม่ว่างตอบ 409 `SEAT_TAKEN`,
-  `GET /api/bookings/{id}` (ของตัวเอง หรือ staff/admin ดูได้ทุกรายการ)
+  `GET /api/bookings/{id}` (ของตัวเอง หรือ staff/admin ดูได้ทุกรายการ),
+  `POST /api/bookings/{id}/cancel` ยกเลิกของตัวเองได้จนถึงเวลารถออก ที่นั่งกลับมาว่างทันที,
+  `GET /api/me/bookings?page=` การจองของฉัน หน้าละ 10
 - บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
   และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
   หน้ารายการรับ `?q=คำค้น&page=เลขหน้า` หน้าละ 10 ตอบ `{ items, page, pageSize, total }`
@@ -96,7 +98,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
 - `/trips` ค้นหารอบรถตามเส้นทาง/วัน (ตัวกรองอยู่ใน URL), `/trips/:id` รายละเอียดรอบ + ผังที่นั่ง เลือกที่นั่งแล้วกดจองได้
-- `/bookings/:id` หน้าตั๋วหลังจองสำเร็จ (ต้องเข้าสู่ระบบ)
+- `/bookings` การจองของฉัน (แบ่งหน้า), `/bookings/:id` หน้าตั๋ว + ปุ่มยกเลิกการจอง (ต้องเข้าสู่ระบบ)
 - `/articles`, `/articles/:id` อ่านบทความ
 - `/articles` ค้นหาและเลื่อนหน้าได้ คำค้นกับเลขหน้าอยู่ใน URL (`?q=&page=`) กด back ได้ แชร์ลิงก์ได้
 - หลังบ้าน `/admin` (เฉพาะ admin) มีแท็บ: `/admin/articles` จัดการบทความ (ค้นหาได้ รวมฉบับร่าง),

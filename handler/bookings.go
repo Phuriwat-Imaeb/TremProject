@@ -96,3 +96,39 @@ func (h *Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, b)
 }
+
+// MyBookings  GET /api/me/bookings?page=  การจองของเจ้าของตั๋ว ใหม่สุดก่อน
+func (h *Handler) MyBookings(w http.ResponseWriter, r *http.Request) {
+	_, page, ok := readPaging(w, r) // หน้านี้ไม่มีช่องค้นหา ใช้แค่เลขหน้า
+	if !ok {
+		return
+	}
+	items, total, err := h.Store.ListMemberBookings(r.Context(), mw.WhoFrom(r.Context()).ID, page, pageSize)
+	if err != nil {
+		internal(w, err)
+		return
+	}
+	writePage(w, items, page, total)
+}
+
+// CancelBooking  POST /api/bookings/{id}/cancel  ยกเลิกการจองของตัวเอง ยกเลิกได้จนถึงเวลารถออก
+func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r, "id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
+		return
+	}
+	b, err := h.Store.CancelBooking(r.Context(), id, mw.WhoFrom(r.Context()).ID)
+	switch {
+	case err == nil:
+		writeJSON(w, http.StatusOK, b)
+	case errors.Is(err, store.ErrNotFound):
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
+	case errors.Is(err, store.ErrWrongStatus):
+		writeError(w, http.StatusConflict, "WRONG_STATUS", "การจองนี้ยกเลิกไปแล้ว")
+	case errors.Is(err, store.ErrTripClosed):
+		writeError(w, http.StatusConflict, "TRIP_CLOSED", "รถออกไปแล้วหรือรอบถูกยกเลิก ยกเลิกการจองไม่ได้")
+	default:
+		internal(w, err)
+	}
+}

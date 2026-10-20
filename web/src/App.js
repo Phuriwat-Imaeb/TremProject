@@ -7,6 +7,7 @@ import AdminMembers from './pages/admin/AdminMembers';
 import ArticleForm from './pages/admin/ArticleForm';
 import ArticleDetail from './pages/ArticleDetail';
 import BookingDetail from './pages/BookingDetail';
+import MyBookings from './pages/MyBookings';
 import Articles from './pages/Articles';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -35,6 +36,14 @@ function App() {
           />
           <Route path="/trips" element={<Trips />} />
           <Route path="/trips/:id" element={<TripDetail />} />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/bookings/:id"
             element={

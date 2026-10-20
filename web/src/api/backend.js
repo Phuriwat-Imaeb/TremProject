@@ -112,3 +112,11 @@ export function createBooking({ tripId, seats }, token) {
 export function getBooking(id, token) {
   return apiFetch(`/api/bookings/${id}`, { token });
 }
+// การจองของฉัน ใหม่สุดก่อน ได้ { items, page, pageSize, total }
+export function listMyBookings({ page } = {}, token) {
+  return apiFetch(withQuery('/api/me/bookings', { page }), { token });
+}
+// ได้การจองหลังยกเลิกกลับมา ยกเลิกซ้ำ → 'WRONG_STATUS', รถออกแล้ว → 'TRIP_CLOSED'
+export function cancelBooking(id, token) {
+  return apiFetch(`/api/bookings/${id}/cancel`, { method: 'POST', token });
+}

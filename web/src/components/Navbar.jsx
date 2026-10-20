@@ -38,6 +38,9 @@ function Navbar() {
       )}
       {isLoggedIn ? (
         <>
+          <NavLink to="/bookings" className={linkClass}>
+            การจองของฉัน
+          </NavLink>
           <NavLink to="/me" className={linkClass}>
             {member?.displayName ?? 'บัญชีของฉัน'}
           </NavLink>

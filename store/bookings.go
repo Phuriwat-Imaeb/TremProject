@@ -36,23 +36,57 @@ type Booking struct {
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 
-// BookingByID การจองหนึ่งรายการ พร้อมรอบรถและเลขที่นั่ง ไม่มี id นี้ → ErrNotFound
-func (s *Store) BookingByID(ctx context.Context, id int64) (Booking, error) {
+// ทุก query ของการจองดึงคอลัมน์ชุดเดียวกัน JOIN รอบรถมาในคราวเดียว
+// หน้า "การจองของฉัน" จึงยิง query เดียวได้ทั้งหน้า ไม่ต้องวนถามรอบรถทีละการจอง (N+1)
+const bookingCols = `b.id, b.member_id, b.total_baht, b.status, b.cancelled_at, b.created_at,
+	ARRAY(SELECT bs.seat_no FROM booking_seats bs WHERE bs.booking_id = b.id ORDER BY bs.seat_no), ` + tripCols
+
+const bookingFrom = ` FROM bookings b
+	JOIN trips t ON t.id = b.trip_id
+	JOIN routes r ON r.id = t.route_id
+	JOIN vehicles v ON v.id = t.vehicle_id`
+
+func scanBooking(row pgx.Row) (Booking, error) {
 	var b Booking
-	var tripID int64
-	err := s.Pool.QueryRow(ctx,
-		`SELECT b.id, b.member_id, b.trip_id, b.total_baht, b.status, b.cancelled_at, b.created_at,
-		        ARRAY(SELECT bs.seat_no FROM booking_seats bs WHERE bs.booking_id = b.id ORDER BY bs.seat_no)
-		   FROM bookings b WHERE b.id = $1`, id).
-		Scan(&b.ID, &b.MemberID, &tripID, &b.TotalBaht, &b.Status, &b.CancelledAt, &b.CreatedAt, &b.Seats)
+	dest := append([]any{&b.ID, &b.MemberID, &b.TotalBaht, &b.Status, &b.CancelledAt, &b.CreatedAt, &b.Seats},
+		b.Trip.scanDest()...)
+	err := row.Scan(dest...)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Booking{}, ErrNotFound
 	}
-	if err != nil {
-		return Booking{}, err
-	}
-	b.Trip, err = s.TripByID(ctx, tripID)
 	return b, err
+}
+
+// BookingByID การจองหนึ่งรายการ พร้อมรอบรถและเลขที่นั่ง ไม่มี id นี้ → ErrNotFound
+func (s *Store) BookingByID(ctx context.Context, id int64) (Booking, error) {
+	return scanBooking(s.Pool.QueryRow(ctx, `SELECT `+bookingCols+bookingFrom+` WHERE b.id = $1`, id))
+}
+
+// ListMemberBookings การจองของสมาชิกคนหนึ่ง ใหม่สุดก่อน ทีละหน้า คืนรายการ + จำนวนทั้งหมด
+func (s *Store) ListMemberBookings(ctx context.Context, memberID int64, page, pageSize int) ([]Booking, int, error) {
+	var total int
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM bookings WHERE member_id = $1`, memberID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.Pool.Query(ctx,
+		`SELECT `+bookingCols+bookingFrom+`
+		  WHERE b.member_id = $1
+		  ORDER BY b.created_at DESC, b.id DESC
+		  LIMIT $2 OFFSET $3`, memberID, pageSize, (page-1)*pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	out := []Booking{}
+	for rows.Next() {
+		b, err := scanBooking(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, b)
+	}
+	return out, total, rows.Err()
 }
 
 // CreateBooking จองที่นั่ง (handler ตรวจมาแล้วว่า seats ไม่ว่าง ไม่ซ้ำ เรียงแล้ว ไม่เกิน 10 ที่)
@@ -131,4 +165,52 @@ func (s *Store) CreateBooking(ctx context.Context, memberID, tripID int64, seats
 		return Booking{}, err
 	}
 	return s.BookingByID(ctx, bookingID)
+}
+
+// ErrWrongStatus สถานะตอนนี้ทำรายการนี้ไม่ได้ เช่น ยกเลิกซ้ำ handler แปลเป็น 409 WRONG_STATUS
+var ErrWrongStatus = errors.New("wrong status")
+
+// CancelBooking ยกเลิกการจองของ memberID ที่นั่งกลับมาว่างทันที
+// ของคนอื่นหรือไม่มี → ErrNotFound, ยกเลิกไปแล้ว → ErrWrongStatus, รถออก/รอบถูกยกเลิก → ErrTripClosed
+func (s *Store) CancelBooking(ctx context.Context, id, memberID int64) (Booking, error) {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return Booking{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	// ล็อกแถวการจอง (FOR UPDATE) กันกดยกเลิกสองแท็บพร้อมกันแล้วทำงานซ้ำ แท็บที่สองจะรอแล้วเห็นว่า cancelled แล้ว
+	var owner int64
+	var status, tripStatus string
+	var departed bool
+	err = tx.QueryRow(ctx,
+		`SELECT b.member_id, b.status, t.status, t.depart_at <= now()
+		   FROM bookings b JOIN trips t ON t.id = b.trip_id
+		  WHERE b.id = $1
+		    FOR UPDATE OF b`, id).Scan(&owner, &status, &tripStatus, &departed)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != memberID) {
+		return Booking{}, ErrNotFound // ของคนอื่นตอบเหมือนหาไม่เจอ
+	}
+	if err != nil {
+		return Booking{}, err
+	}
+	if status == "cancelled" {
+		return Booking{}, ErrWrongStatus
+	}
+	if tripStatus != "scheduled" || departed {
+		return Booking{}, ErrTripClosed
+	}
+
+	// สองคำสั่งนี้ต้องสำเร็จคู่กัน: ถ้าการจองเป็น cancelled แต่ที่นั่งยังไม่ปล่อย ที่นั่งจะว่างไม่ได้อีกเลย
+	if _, err := tx.Exec(ctx,
+		`UPDATE bookings SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1`, id); err != nil {
+		return Booking{}, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE booking_seats SET released = true WHERE booking_id = $1`, id); err != nil {
+		return Booking{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Booking{}, err
+	}
+	return s.BookingByID(ctx, id)
 }

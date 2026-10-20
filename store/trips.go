@@ -52,11 +52,16 @@ const tripFrom = ` FROM trips t
 	JOIN routes r ON r.id = t.route_id
 	JOIN vehicles v ON v.id = t.vehicle_id`
 
+// scanDest ที่รับค่าของ tripCols ตามลำดับคอลัมน์ ใช้ร่วมกับ query อื่นที่ JOIN รอบรถมาด้วย (เช่น การจอง)
+func (t *Trip) scanDest() []any {
+	return []any{&t.ID, &t.Route.ID, &t.Route.Origin, &t.Route.Destination, &t.Route.DurationMin,
+		&t.Vehicle.ID, &t.Vehicle.Plate, &t.Vehicle.Kind, &t.Vehicle.SeatCount,
+		&t.DepartAt, &t.ArriveAt, &t.PriceBaht, &t.Status, &t.Departed, &t.SeatsLeft}
+}
+
 func scanTrip(row pgx.Row) (Trip, error) {
 	var t Trip
-	err := row.Scan(&t.ID, &t.Route.ID, &t.Route.Origin, &t.Route.Destination, &t.Route.DurationMin,
-		&t.Vehicle.ID, &t.Vehicle.Plate, &t.Vehicle.Kind, &t.Vehicle.SeatCount,
-		&t.DepartAt, &t.ArriveAt, &t.PriceBaht, &t.Status, &t.Departed, &t.SeatsLeft)
+	err := row.Scan(t.scanDest()...)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Trip{}, ErrNotFound
 	}

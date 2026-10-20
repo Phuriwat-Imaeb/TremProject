@@ -415,3 +415,70 @@ func TestGetBooking(t *testing.T) {
 		t.Errorf("การจองที่ยกเลิกแล้วไม่ตรง: %d %+v", code, b)
 	}
 }
+
+func TestMyBookings(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	nida, _ := tickets.Issue(3, "member")
+
+	// seed: นิดามีการจอง 1 (รอบ 1) และ 4 (รอบ 7 เมื่อวาน) สร้างใน transaction เดียวกัน เวลาเท่ากัน → เรียง id มากก่อน
+	var page struct {
+		Items                 []store.Booking
+		Page, PageSize, Total int
+	}
+	if code := call(t, srv, "GET", "/api/me/bookings", nida, nil, &page); code != 200 || page.Total != 2 || len(page.Items) != 2 {
+		t.Fatalf("นิดาต้องมี 2 การจอง ได้ %d %+v", code, page)
+	}
+	if page.Items[0].ID != 4 || page.Items[1].ID != 1 || page.Items[1].Trip.Route.Destination != "นครปฐม" || !page.Items[0].Trip.Departed {
+		t.Errorf("ลำดับหรือรอบรถของการจองไม่ตรง: %+v", page.Items)
+	}
+	if code := call(t, srv, "GET", "/api/me/bookings?page=0", nida, nil, nil); code != 400 {
+		t.Errorf("page=0 ต้องได้ 400 ได้ %d", code)
+	}
+	if code := call(t, srv, "GET", "/api/me/bookings", "", nil, nil); code != 401 {
+		t.Errorf("ไม่มีตั๋วต้องได้ 401 ได้ %d", code)
+	}
+}
+
+func TestCancelBooking(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	ton, _ := tickets.Issue(4, "member")
+	nida, _ := tickets.Issue(3, "member")
+
+	book := func() store.Booking {
+		var b store.Booking
+		if code := call(t, srv, "POST", "/api/bookings", ton, map[string]any{"tripId": 2, "seats": []int{8}}, &b); code != 201 {
+			t.Fatalf("จองที่นั่ง 8 รอบ 2 ต้องได้ 201 ได้ %d", code)
+		}
+		t.Cleanup(func() { dbExec(t, `DELETE FROM bookings WHERE id = $1`, b.ID) })
+		return b
+	}
+	b := book()
+	path := fmt.Sprintf("/api/bookings/%d/cancel", b.ID)
+
+	var e struct{ Error struct{ Code string } }
+	if code := call(t, srv, "POST", path, nida, nil, &e); code != 404 {
+		t.Errorf("ยกเลิกของคนอื่นต้องได้ 404 ได้ %d", code)
+	}
+
+	var got store.Booking
+	if code := call(t, srv, "POST", path, ton, nil, &got); code != 200 || got.Status != "cancelled" || got.CancelledAt == nil || fmt.Sprint(got.Seats) != "[8]" {
+		t.Fatalf("ยกเลิกต้องได้ 200 cancelled ได้ %d %+v", code, got)
+	}
+	var m store.SeatMap
+	call(t, srv, "GET", "/api/trips/2/seats", "", nil, &m)
+	if fmt.Sprint(m.Taken) != "[]" {
+		t.Errorf("ยกเลิกแล้วที่นั่ง 8 ต้องว่าง ได้ %v", m.Taken)
+	}
+	if code := call(t, srv, "POST", path, ton, nil, &e); code != 409 || e.Error.Code != "WRONG_STATUS" {
+		t.Errorf("ยกเลิกซ้ำต้องได้ 409 WRONG_STATUS ได้ %d %s", code, e.Error.Code)
+	}
+	book() // ที่นั่งที่ปล่อยแล้วต้องจองใหม่ได้
+
+	// การจอง 4 ของนิดาเป็นรอบเมื่อวาน รถออกไปแล้ว
+	if code := call(t, srv, "POST", "/api/bookings/4/cancel", nida, nil, &e); code != 409 || e.Error.Code != "TRIP_CLOSED" {
+		t.Errorf("รถออกแล้วต้องได้ 409 TRIP_CLOSED ได้ %d %s", code, e.Error.Code)
+	}
+	if code := call(t, srv, "POST", "/api/bookings/999999/cancel", ton, nil, nil); code != 404 {
+		t.Errorf("ไม่มีการจองนี้ต้องได้ 404 ได้ %d", code)
+	}
+}
