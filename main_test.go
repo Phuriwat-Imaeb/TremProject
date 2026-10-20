@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -286,5 +287,131 @@ func TestTripSeats(t *testing.T) {
 	}
 	if code := call(t, srv, "GET", "/api/trips/999999/seats", "", nil, nil); code != 404 {
 		t.Errorf("รอบที่ไม่มี ต้องได้ 404 ได้ %d", code)
+	}
+}
+
+// dbExec สั่ง SQL ตรง ๆ ไว้เก็บกวาดข้อมูลที่เทสต์สร้าง (การจองยังไม่มี API ลบ)
+func dbExec(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCreateBooking(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	ton, _ := tickets.Issue(4, "member") // id ตาม seed.sql: 4 = ต้น
+
+	// จองรอบ 2 (รถตู้ 13 ที่ ราคา 80 ยังไม่มีใครจอง) ส่งเลขสลับกันมา ต้องเรียงให้
+	var b store.Booking
+	if code := call(t, srv, "POST", "/api/bookings", ton, map[string]any{"tripId": 2, "seats": []int{4, 3}}, &b); code != 201 {
+		t.Fatalf("จองต้องได้ 201 ได้ %d", code)
+	}
+	t.Cleanup(func() { dbExec(t, `DELETE FROM bookings WHERE id = $1`, b.ID) })
+	if fmt.Sprint(b.Seats) != "[3 4]" || b.TotalBaht != 160 || b.Status != "confirmed" || b.Trip.ID != 2 || b.Trip.SeatsLeft != 11 {
+		t.Errorf("การจองที่ได้ไม่ตรง: %+v", b)
+	}
+	var m store.SeatMap
+	call(t, srv, "GET", "/api/trips/2/seats", "", nil, &m)
+	if fmt.Sprint(m.Taken) != "[3 4]" {
+		t.Errorf("จองแล้วผังต้องไม่ว่าง [3 4] ได้ %v", m.Taken)
+	}
+
+	cases := []struct {
+		name  string
+		token string
+		body  any
+		code  int
+		err   string
+		msg   string
+	}{
+		{"ไม่มีตั๋ว", "", map[string]any{"tripId": 2, "seats": []int{5}}, 401, "LOGIN_REQUIRED", ""},
+		{"ไม่ส่งรอบ", ton, map[string]any{"seats": []int{5}}, 400, "MISSING_FIELD", ""},
+		{"ไม่เลือกที่นั่ง", ton, map[string]any{"tripId": 2, "seats": []int{}}, 400, "BAD_SEATS", ""},
+		{"เลขซ้ำ", ton, map[string]any{"tripId": 2, "seats": []int{5, 5}}, 400, "BAD_SEATS", ""},
+		{"เลขศูนย์", ton, map[string]any{"tripId": 2, "seats": []int{0}}, 400, "BAD_SEATS", ""},
+		{"เกิน 10 ที่", ton, map[string]any{"tripId": 2, "seats": []int{1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13}}, 400, "BAD_SEATS", ""},
+		{"เกินที่นั่งของรถ", ton, map[string]any{"tripId": 2, "seats": []int{14}}, 400, "BAD_SEATS", "รถคันนี้มีที่นั่ง 1–13"},
+		{"มีคนจองแล้ว", ton, map[string]any{"tripId": 1, "seats": []int{3, 2, 1}}, 409, "SEAT_TAKEN", "ที่นั่ง 1, 2 มีคนจองแล้ว"},
+		{"รอบถูกยกเลิก", ton, map[string]any{"tripId": 6, "seats": []int{1}}, 409, "TRIP_CLOSED", ""},
+		{"รถออกไปแล้ว", ton, map[string]any{"tripId": 7, "seats": []int{1}}, 409, "TRIP_CLOSED", ""},
+		{"ไม่มีรอบนี้", ton, map[string]any{"tripId": 999999, "seats": []int{1}}, 404, "NOT_FOUND", ""},
+	}
+	for _, c := range cases {
+		var e struct {
+			Error struct{ Code, Message string }
+		}
+		code := call(t, srv, "POST", "/api/bookings", c.token, c.body, &e)
+		if code != c.code || e.Error.Code != c.err || (c.msg != "" && e.Error.Message != c.msg) {
+			t.Errorf("%s: ต้องได้ %d %s %q ได้ %d %s %q", c.name, c.code, c.err, c.msg, code, e.Error.Code, e.Error.Message)
+		}
+	}
+	// ที่นั่ง 3 ของรอบ 1 ว่างอยู่ แต่จองพร้อม 1, 2 ที่ไม่ว่าง → ต้องไม่ถูกจองไปด้วย (ทั้งหมดหรือไม่เลย)
+	call(t, srv, "GET", "/api/trips/1/seats", "", nil, &m)
+	if fmt.Sprint(m.Taken) != "[1 2 5]" {
+		t.Errorf("จองไม่สำเร็จต้องไม่มีที่นั่งไหนถูกจองค้าง ได้ %v", m.Taken)
+	}
+}
+
+// ★ 10 คนกดจองที่นั่งเดียวกันพร้อมกัน ต้องสำเร็จคนเดียว ที่เหลือได้ 409 SEAT_TAKEN
+func TestCreateBookingRace(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	ton, _ := tickets.Issue(4, "member")
+
+	const n = 10
+	codes := make([]int, n)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			codes[i] = call(t, srv, "POST", "/api/bookings", ton, map[string]any{"tripId": 3, "seats": []int{9}}, nil)
+		}()
+	}
+	wg.Wait()
+	t.Cleanup(func() { dbExec(t, `DELETE FROM bookings WHERE trip_id = 3`) })
+
+	won, lost := 0, 0
+	for _, c := range codes {
+		switch c {
+		case 201:
+			won++
+		case 409:
+			lost++
+		}
+	}
+	if won != 1 || lost != n-1 {
+		t.Errorf("ต้องสำเร็จ 1 คน ได้ 409 อีก %d คน ได้ %v", n-1, codes)
+	}
+}
+
+func TestGetBooking(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	nida, _ := tickets.Issue(3, "member")
+	ton, _ := tickets.Issue(4, "member")
+	staff, _ := tickets.Issue(2, "staff")
+
+	// การจอง 1 ใน seed เป็นของนิดา ที่นั่ง 1, 2 รอบ 1
+	var b store.Booking
+	if code := call(t, srv, "GET", "/api/bookings/1", nida, nil, &b); code != 200 || fmt.Sprint(b.Seats) != "[1 2]" || b.Trip.ID != 1 {
+		t.Errorf("เจ้าของต้องเห็นการจองของตัวเอง ได้ %d %+v", code, b)
+	}
+	if code := call(t, srv, "GET", "/api/bookings/1", staff, nil, nil); code != 200 {
+		t.Errorf("staff ต้องดูได้ ได้ %d", code)
+	}
+	if code := call(t, srv, "GET", "/api/bookings/1", ton, nil, nil); code != 404 {
+		t.Errorf("ของคนอื่นต้องได้ 404 ได้ %d", code)
+	}
+	if code := call(t, srv, "GET", "/api/bookings/1", "", nil, nil); code != 401 {
+		t.Errorf("ไม่มีตั๋วต้องได้ 401 ได้ %d", code)
+	}
+	// ยกเลิกแล้วยังเห็นที่นั่งเดิม (ประวัติ) และ cancelledAt มีค่า
+	if code := call(t, srv, "GET", "/api/bookings/3", ton, nil, &b); code != 200 || b.Status != "cancelled" || b.CancelledAt == nil || fmt.Sprint(b.Seats) != "[12]" {
+		t.Errorf("การจองที่ยกเลิกแล้วไม่ตรง: %d %+v", code, b)
 	}
 }

@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import * as api from '../api/backend';
-import { renderWithProviders, trip } from '../test-utils';
+import { loginAs, nida, renderWithProviders, trip } from '../test-utils';
 import TripDetail from './TripDetail';
 
 jest.mock('../api/backend');
@@ -11,6 +11,8 @@ function renderAt(route) {
   renderWithProviders(
     <Routes>
       <Route path="/trips/:id" element={<TripDetail />} />
+      <Route path="/bookings/:id" element={<p>หน้าตั๋ว</p>} />
+      <Route path="/login" element={<p>หน้า login</p>} />
     </Routes>,
     { route }
   );
@@ -65,4 +67,47 @@ test('ไม่พบรอบ ต้องโชว์ข้อความจ�
   api.getTrip.mockRejectedValue(new Error('ไม่พบรายการนี้'));
   renderAt('/trips/999');
   expect(await screen.findByRole('alert')).toHaveTextContent('ไม่พบรายการนี้');
+});
+
+test('ยังไม่เข้าสู่ระบบ: ปุ่มจองเป็นลิงก์ไปหน้า login', async () => {
+  api.getTrip.mockResolvedValue(trip(1));
+  renderAt('/trips/1');
+  await userEvent.click(await screen.findByRole('link', { name: 'เข้าสู่ระบบเพื่อจอง' }));
+  expect(screen.getByText('หน้า login')).toBeInTheDocument();
+});
+
+test('จองสำเร็จ: ส่งรอบ + ที่นั่งไป แล้วพาไปหน้าตั๋ว', async () => {
+  loginAs(nida);
+  api.getTrip.mockResolvedValue(trip(1));
+  api.createBooking.mockResolvedValue({ id: 9, seats: [3, 4] });
+  renderAt('/trips/1');
+
+  const bookBtn = await screen.findByRole('button', { name: 'จองที่นั่ง' });
+  expect(bookBtn).toBeDisabled(); // ยังไม่เลือก กดไม่ได้
+  await userEvent.click(screen.getByRole('button', { name: 'ที่นั่ง 4' }));
+  await userEvent.click(screen.getByRole('button', { name: 'ที่นั่ง 3' }));
+  await userEvent.click(screen.getByRole('button', { name: 'จอง 2 ที่นั่ง' }));
+
+  expect(api.createBooking).toHaveBeenCalledWith({ tripId: 1, seats: [3, 4] }, 'tok');
+  expect(await screen.findByText('หน้าตั๋ว')).toBeInTheDocument();
+  expect(screen.getByText('จองสำเร็จ ที่นั่ง 3, 4')).toBeInTheDocument();
+});
+
+test('มีคนจองตัดหน้า: บอกเหตุผล โหลดผังใหม่ และตัดที่นั่งนั้นออกจากที่เลือก', async () => {
+  loginAs(nida);
+  api.getTrip.mockResolvedValue(trip(1));
+  api.getTripSeats
+    .mockResolvedValueOnce({ tripId: 1, kind: 'van', seatCount: 13, taken: [1, 2, 5] })
+    .mockResolvedValueOnce({ tripId: 1, kind: 'van', seatCount: 13, taken: [1, 2, 4, 5] });
+  api.createBooking.mockRejectedValue(Object.assign(new Error('ที่นั่ง 4 มีคนจองแล้ว'), { code: 'SEAT_TAKEN' }));
+  renderAt('/trips/1');
+
+  await userEvent.click(await screen.findByRole('button', { name: 'ที่นั่ง 3' }));
+  await userEvent.click(screen.getByRole('button', { name: 'ที่นั่ง 4' }));
+  await userEvent.click(screen.getByRole('button', { name: 'จอง 2 ที่นั่ง' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('ที่นั่ง 4 มีคนจองแล้ว');
+  expect(await screen.findByRole('button', { name: 'ที่นั่ง 4 ไม่ว่าง' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'จอง 1 ที่นั่ง' })).toBeEnabled();
+  expect(api.getTripSeats).toHaveBeenCalledTimes(2);
 });

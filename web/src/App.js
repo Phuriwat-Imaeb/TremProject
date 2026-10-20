@@ -6,6 +6,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminMembers from './pages/admin/AdminMembers';
 import ArticleForm from './pages/admin/ArticleForm';
 import ArticleDetail from './pages/ArticleDetail';
+import BookingDetail from './pages/BookingDetail';
 import Articles from './pages/Articles';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -34,6 +35,14 @@ function App() {
           />
           <Route path="/trips" element={<Trips />} />
           <Route path="/trips/:id" element={<TripDetail />} />
+          <Route
+            path="/bookings/:id"
+            element={
+              <ProtectedRoute>
+                <BookingDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:id" element={<ArticleDetail />} />
           {/* หลังบ้าน: ด่าน admin ครอบทั้งกลุ่มที่เดียว หน้าย่อยไปแสดงใน <Outlet /> ของ AdminLayout */}

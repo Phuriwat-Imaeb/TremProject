@@ -103,3 +103,12 @@ export function getTrip(id) {
 export function getTripSeats(id) {
   return apiFetch(`/api/trips/${id}/seats`);
 }
+
+// ---------- การจอง (ต้องเข้าสู่ระบบ) ----------
+// ที่นั่งไม่ว่าง → error.code = 'SEAT_TAKEN', รอบปิดแล้ว → 'TRIP_CLOSED'
+export function createBooking({ tripId, seats }, token) {
+  return apiFetch('/api/bookings', { method: 'POST', body: { tripId, seats }, token });
+}
+export function getBooking(id, token) {
+  return apiFetch(`/api/bookings/${id}`, { token });
+}
