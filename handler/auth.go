@@ -6,6 +6,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/gin-gonic/gin"
+
 	"jongkookhub/auth"
 	"jongkookhub/mw"
 	"jongkookhub/store"
@@ -19,23 +21,23 @@ type registerReq struct {
 }
 
 // Register  POST /api/auth/register  ได้บทบาท member เสมอ ไม่รับ role จากผู้ใช้
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Register(c *gin.Context) {
 	var req registerReq
-	if !readJSON(w, r, &req) {
+	if !readJSON(c, &req) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	name := strings.TrimSpace(req.DisplayName)
 	switch {
 	case !strings.Contains(email, "@") || len(email) > 255:
-		writeError(w, http.StatusBadRequest, "BAD_EMAIL", "รูปแบบอีเมลไม่ถูกต้อง")
+		writeError(c, http.StatusBadRequest, "BAD_EMAIL", "รูปแบบอีเมลไม่ถูกต้อง")
 		return
 	// ขั้นต่ำนับเป็นตัวอักษร แต่ขั้นสูงนับเป็นไบต์ เพราะ bcrypt รับได้แค่ 72 ไบต์ (อักษรไทย 1 ตัว = 3 ไบต์)
 	case utf8.RuneCountInString(req.Password) < 8 || len(req.Password) > 72:
-		writeError(w, http.StatusBadRequest, "BAD_PASSWORD", "รหัสผ่านต้องยาว 8 ตัวอักษรขึ้นไป และไม่เกิน 72 ไบต์")
+		writeError(c, http.StatusBadRequest, "BAD_PASSWORD", "รหัสผ่านต้องยาว 8 ตัวอักษรขึ้นไป และไม่เกิน 72 ไบต์")
 		return
 	case name == "" || utf8.RuneCountInString(name) > 50:
-		writeError(w, http.StatusBadRequest, "BAD_NAME", "ชื่อที่แสดงต้องยาว 1-50 ตัวอักษร")
+		writeError(c, http.StatusBadRequest, "BAD_NAME", "ชื่อที่แสดงต้องยาว 1-50 ตัวอักษร")
 		return
 	}
 
@@ -49,19 +51,19 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	m, err := h.Store.CreateMember(r.Context(), email, hash, name, phone)
+	m, err := h.Store.CreateMember(c.Request.Context(), email, hash, name, phone)
 	if errors.Is(err, store.ErrEmailTaken) {
-		writeError(w, http.StatusConflict, "EMAIL_TAKEN", "อีเมลนี้มีบัญชีอยู่แล้ว")
+		writeError(c, http.StatusConflict, "EMAIL_TAKEN", "อีเมลนี้มีบัญชีอยู่แล้ว")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, m)
+	c.JSON(http.StatusCreated, m)
 }
 
 type loginReq struct {
@@ -71,46 +73,46 @@ type loginReq struct {
 
 // Login  POST /api/auth/login  ตอบตั๋ว JWT + ข้อมูลสมาชิก
 // อีเมลไม่มี กับรหัสผิด ตอบเหมือนกันทุกอย่าง ทั้งข้อความและเวลาที่ใช้
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(c *gin.Context) {
 	var req loginReq
-	if !readJSON(w, r, &req) {
+	if !readJSON(c, &req) {
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(req.Email))
-	m, err := h.Store.MemberByEmail(r.Context(), email)
+	m, err := h.Store.MemberByEmail(c.Request.Context(), email)
 	if errors.Is(err, store.ErrNotFound) {
 		auth.WasteTime(req.Password)
-		writeError(w, http.StatusUnauthorized, "BAD_CREDENTIALS", "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+		writeError(c, http.StatusUnauthorized, "BAD_CREDENTIALS", "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
 	if !auth.CheckPassword(m.PasswordHash, req.Password) {
-		writeError(w, http.StatusUnauthorized, "BAD_CREDENTIALS", "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+		writeError(c, http.StatusUnauthorized, "BAD_CREDENTIALS", "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
 		return
 	}
 	token, err := h.Tickets.Issue(m.ID, m.Role)
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"token": token, "member": m})
+	c.JSON(http.StatusOK, map[string]any{"token": token, "member": m})
 }
 
 // Me  GET /api/me  ข้อมูลของเจ้าของตั๋ว (ต้องผ่าน RequireLogin มาก่อน)
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	who := mw.WhoFrom(r.Context())
-	m, err := h.Store.MemberByID(r.Context(), who.ID)
+func (h *Handler) Me(c *gin.Context) {
+	who := mw.WhoFrom(c)
+	m, err := h.Store.MemberByID(c.Request.Context(), who.ID)
 	if errors.Is(err, store.ErrNotFound) {
 		// ตั๋วยังไม่หมดอายุ แต่บัญชีถูกลบไปแล้ว
-		writeError(w, http.StatusUnauthorized, "LOGIN_REQUIRED", "กรุณาเข้าสู่ระบบก่อน")
+		writeError(c, http.StatusUnauthorized, "LOGIN_REQUIRED", "กรุณาเข้าสู่ระบบก่อน")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, m)
+	c.JSON(http.StatusOK, m)
 }

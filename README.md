@@ -1,6 +1,6 @@
 # Jong(kook)hub — ระบบจองที่นั่งรถตู้ / รถทัวร์ (TremProject)
 
-API หลังบ้าน (Go + PostgreSQL) และหน้าเว็บ React ([web/](web)) วิชา 520342 Server Side Web Programming
+API หลังบ้าน (Go + Gin + PostgreSQL) และหน้าเว็บ React ([web/](web)) วิชา 520342 Server Side Web Programming
 สัญญา API ทั้งหมดอยู่ใน [openapi.yaml](openapi.yaml)
 
 ## รันบนเครื่อง / Codespaces
@@ -142,7 +142,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 | ฐานข้อมูล | `db/schema.sql` | สร้างตาราง |
 | store | [store/articles.go](store/articles.go) | SQL ล้วน ๆ ไม่รู้จัก HTTP หาไม่เจอคืน `ErrNotFound` |
 | handler | [handler/articles.go](handler/articles.go) | อ่าน/ตรวจ JSON แปลง error เป็นเลขสถานะ |
-| เส้นทาง | [routes.go](routes.go) | ผูก path กับ handler และด่านสิทธิ์ `login` / `maybe` / `admin` |
+| เส้นทาง | [routes.go](routes.go) | router ของ Gin: ผูก path กับ handler, ด่าน `login` / `maybe` และ group `/api/staff`, `/api/admin` |
 | สัญญา | [openapi.yaml](openapi.yaml) | หน้าตาคำขอและคำตอบ |
 | เทสต์ API | [main_test.go](main_test.go) | 401/403/400/404 และสร้าง-อ่าน-แก้-ลบ ผ่านฐานข้อมูลจริง |
 | หน้าเว็บ | [web/src/api/backend.js](web/src/api/backend.js) | ฟังก์ชันเรียก API |

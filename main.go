@@ -3,18 +3,17 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"jongkookhub/auth"
 	"jongkookhub/handler"
 	"jongkookhub/live"
-	"jongkookhub/mw"
 	"jongkookhub/store"
 )
 
@@ -49,7 +48,9 @@ func main() {
 		Live:      live.NewHub(),
 		WSOrigins: wsHosts(origins),
 	}
-	mux := routes(h, tickets) // รายการเส้นทางทั้งหมดอยู่ใน routes.go
+	// โหมด release: Gin ไม่พิมพ์รายการ route กับคำเตือนโหมด debug ลง log ตอนเริ่ม
+	gin.SetMode(gin.ReleaseMode)
+	r := routes(h, tickets, origins) // รายการเส้นทางทั้งหมดอยู่ใน routes.go
 
 	// Render กำหนด port ให้ผ่าน PORT ถ้าไม่มี (เครื่องตัวเอง) ใช้ 8080
 	port := os.Getenv("PORT")
@@ -58,7 +59,7 @@ func main() {
 	}
 
 	log.Println("Jong(kook)hub API รออยู่ที่ :"+port, "origin ที่อนุญาต:", origins)
-	log.Fatal(http.ListenAndServe(":"+port, mw.Logging(mw.CORS(origins, mux))))
+	log.Fatal(r.Run(":" + port))
 }
 
 // wsHosts แปลง origin เต็ม ๆ (https://xxx.vercel.app) เป็นแค่ host (xxx.vercel.app)

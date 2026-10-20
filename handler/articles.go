@@ -6,6 +6,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/gin-gonic/gin"
+
 	"jongkookhub/mw"
 	"jongkookhub/store"
 )
@@ -38,128 +40,128 @@ func cleanArticle(in *store.ArticleInput) string {
 }
 
 // hidePhone คนที่ยังไม่ login ไม่เห็นเบอร์โทรคนเขียน (ตามสัญญา Person)
-func hidePhone(r *http.Request, a *store.Article) {
-	if mw.WhoFrom(r.Context()).ID == 0 {
+func hidePhone(c *gin.Context, a *store.Article) {
+	if mw.WhoFrom(c).ID == 0 {
 		a.Author.Phone = nil
 	}
 }
 
 // ListArticles  GET /api/articles?q=&page=  เฉพาะที่เผยแพร่แล้ว ใหม่สุดก่อน หน้าละ 10
-func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
-	h.listArticles(w, r, false)
+func (h *Handler) ListArticles(c *gin.Context) {
+	h.listArticles(c, false)
 }
 
 // GetArticle  GET /api/articles/{id}  ฉบับร่างตอบ 404 เหมือนไม่มี
-func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
-	h.getArticle(w, r, false)
+func (h *Handler) GetArticle(c *gin.Context) {
+	h.getArticle(c, false)
 }
 
 // AdminListArticles  GET /api/admin/articles?q=&page=  รวมฉบับร่าง
-func (h *Handler) AdminListArticles(w http.ResponseWriter, r *http.Request) {
-	h.listArticles(w, r, true)
+func (h *Handler) AdminListArticles(c *gin.Context) {
+	h.listArticles(c, true)
 }
 
-func (h *Handler) listArticles(w http.ResponseWriter, r *http.Request, drafts bool) {
-	q, page, ok := readPaging(w, r)
+func (h *Handler) listArticles(c *gin.Context, drafts bool) {
+	q, page, ok := readPaging(c)
 	if !ok {
 		return
 	}
-	items, total, err := h.Store.ListArticles(r.Context(),
+	items, total, err := h.Store.ListArticles(c.Request.Context(),
 		store.ArticleFilter{Drafts: drafts, Q: q, Page: page, PageSize: pageSize})
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
 	for i := range items {
-		hidePhone(r, &items[i])
+		hidePhone(c, &items[i])
 	}
-	writePage(w, items, page, total)
+	writePage(c, items, page, total)
 }
 
 // AdminGetArticle  GET /api/admin/articles/{id}  อ่านฉบับร่างได้ ใช้เปิดหน้าแก้ไข
-func (h *Handler) AdminGetArticle(w http.ResponseWriter, r *http.Request) {
-	h.getArticle(w, r, true)
+func (h *Handler) AdminGetArticle(c *gin.Context) {
+	h.getArticle(c, true)
 }
 
-func (h *Handler) getArticle(w http.ResponseWriter, r *http.Request, drafts bool) {
-	id, ok := pathID(r, "id")
+func (h *Handler) getArticle(c *gin.Context, drafts bool) {
+	id, ok := pathID(c, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
+		writeError(c, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
 		return
 	}
-	a, err := h.Store.ArticleByID(r.Context(), id, drafts)
+	a, err := h.Store.ArticleByID(c.Request.Context(), id, drafts)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
+		writeError(c, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	hidePhone(r, &a)
-	writeJSON(w, http.StatusOK, a)
+	hidePhone(c, &a)
+	c.JSON(http.StatusOK, a)
 }
 
 // CreateArticle  POST /api/admin/articles  คนเขียนคือเจ้าของตั๋ว ไม่รับจาก body
-func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateArticle(c *gin.Context) {
 	var in store.ArticleInput
-	if !readJSON(w, r, &in) {
+	if !readJSON(c, &in) {
 		return
 	}
 	if msg := cleanArticle(&in); msg != "" {
-		writeError(w, http.StatusBadRequest, "MISSING_FIELD", msg)
+		writeError(c, http.StatusBadRequest, "MISSING_FIELD", msg)
 		return
 	}
-	a, err := h.Store.CreateArticle(r.Context(), mw.WhoFrom(r.Context()).ID, in)
+	a, err := h.Store.CreateArticle(c.Request.Context(), mw.WhoFrom(c).ID, in)
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, a)
+	c.JSON(http.StatusCreated, a)
 }
 
 // UpdateArticle  PUT /api/admin/articles/{id}  แก้ทั้งเรื่อง ฟิลด์ที่ไม่ส่งมาจะกลายเป็นค่าว่าง
-func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "id")
+func (h *Handler) UpdateArticle(c *gin.Context) {
+	id, ok := pathID(c, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
+		writeError(c, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
 		return
 	}
 	var in store.ArticleInput
-	if !readJSON(w, r, &in) {
+	if !readJSON(c, &in) {
 		return
 	}
 	if msg := cleanArticle(&in); msg != "" {
-		writeError(w, http.StatusBadRequest, "MISSING_FIELD", msg)
+		writeError(c, http.StatusBadRequest, "MISSING_FIELD", msg)
 		return
 	}
-	a, err := h.Store.UpdateArticle(r.Context(), id, in)
+	a, err := h.Store.UpdateArticle(c.Request.Context(), id, in)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
+		writeError(c, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, a)
+	c.JSON(http.StatusOK, a)
 }
 
 // DeleteArticle  DELETE /api/admin/articles/{id}  สำเร็จตอบ 204 ไม่มี body
-func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "id")
+func (h *Handler) DeleteArticle(c *gin.Context) {
+	id, ok := pathID(c, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
+		writeError(c, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
 		return
 	}
-	err := h.Store.DeleteArticle(r.Context(), id)
+	err := h.Store.DeleteArticle(c.Request.Context(), id)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
+		writeError(c, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 		return
 	}
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	c.Status(http.StatusNoContent)
 }

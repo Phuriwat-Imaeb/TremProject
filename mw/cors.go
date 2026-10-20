@@ -3,12 +3,14 @@ package mw
 import (
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // CORS บอกเบราว์เซอร์ว่าหน้าเว็บจาก origin ไหนเรียก API นี้ได้
 // allowed มาจาก ALLOWED_ORIGINS เช่น http://localhost:3000,https://xxx.vercel.app
 // origin ที่ไม่อยู่ในรายการจะไม่ได้ header กลับไป เบราว์เซอร์จะบล็อกเอง
-func CORS(allowed []string, next http.Handler) http.Handler {
+func CORS(allowed []string) gin.HandlerFunc {
 	ok := map[string]bool{}
 	for _, o := range allowed {
 		// เบราว์เซอร์ส่ง Origin มาโดยไม่มี / ท้าย ถ้าตั้งค่าเผลอใส่ / มา ตัดทิ้งให้ตรงกัน
@@ -16,22 +18,22 @@ func CORS(allowed []string, next http.Handler) http.Handler {
 			ok[o] = true
 		}
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
 		if ok[origin] {
-			h := w.Header()
+			h := c.Writer.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
 			h.Add("Vary", "Origin")
-			// ต่างจากแลป: API นี้ใช้ PATCH ด้วย ถ้าไม่ใส่ เบราว์เซอร์จะบล็อกตอนเปลี่ยนสถานะประกาศ
 			h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			h.Set("Access-Control-Max-Age", "600")
 		}
 		// preflight: เบราว์เซอร์ถามก่อนว่าส่งได้ไหม ตอบแค่ header แล้วจบ ไม่ต้องถึง handler
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
+		// ใช้ r.Use(...) แล้ว Gin รัน middleware นี้ให้แม้ path นั้นจะไม่มี route OPTIONS ก็ตาม
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		next.ServeHTTP(w, r)
-	})
+		c.Next()
+	}
 }

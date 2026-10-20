@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"jongkookhub/auth"
@@ -22,7 +23,9 @@ import (
 	"jongkookhub/store"
 )
 
-// เทสต์ทั้งเส้นทาง: mux → middleware → handler → ฐานข้อมูลจริง
+func init() { gin.SetMode(gin.TestMode) } // ไม่ให้ Gin พิมพ์รายการ route ทุกครั้งที่สร้าง router ในเทสต์
+
+// เทสต์ทั้งเส้นทาง: router → middleware → handler → ฐานข้อมูลจริง
 // ต้องมี DATABASE_URL ที่รัน schema.sql + seed.sql แล้ว (CI ทำให้) ไม่มีก็ข้าม
 func newTestServer(t *testing.T) (http.Handler, *auth.Issuer) {
 	t.Helper()
@@ -37,7 +40,7 @@ func newTestServer(t *testing.T) (http.Handler, *auth.Issuer) {
 	t.Cleanup(pool.Close)
 	tickets := &auth.Issuer{Secret: []byte("test-secret-ยาวพอสำหรับเทสต์-0123456789"), TTL: time.Hour}
 	h := &handler.Handler{Store: &store.Store{Pool: pool}, Tickets: tickets, Live: live.NewHub()}
-	return routes(h, tickets), tickets
+	return routes(h, tickets, nil), tickets
 }
 
 // call ยิงคำขอหนึ่งครั้ง token ว่าง = ไม่แนบตั๋ว ถ้า out ไม่ใช่ nil จะอ่าน JSON ใส่ให้
@@ -59,6 +62,17 @@ func call(t *testing.T, srv http.Handler, method, path, token string, body, out 
 		}
 	}
 	return rec.Code
+}
+
+func TestUnknownRoute(t *testing.T) {
+	srv, _ := newTestServer(t)
+	var e struct{ Error struct{ Code string } }
+	if code := call(t, srv, "GET", "/api/no-such-thing", "", nil, &e); code != 404 || e.Error.Code != "NOT_FOUND" {
+		t.Errorf("path ที่ไม่มี ต้องได้ 404 NOT_FOUND ได้ %d %s", code, e.Error.Code)
+	}
+	if code := call(t, srv, "DELETE", "/api/trips", "", nil, &e); code != 405 || e.Error.Code != "METHOD_NOT_ALLOWED" {
+		t.Errorf("method ผิด ต้องได้ 405 METHOD_NOT_ALLOWED ได้ %d %s", code, e.Error.Code)
+	}
 }
 
 func TestArticlesCRUD(t *testing.T) {

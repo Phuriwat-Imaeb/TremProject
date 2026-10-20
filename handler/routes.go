@@ -1,13 +1,17 @@
 package handler
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 // ListRoutes  GET /api/routes  เส้นทางทั้งหมด ไว้ให้หน้าเว็บทำตัวเลือก ต้นทาง → ปลายทาง
-func (h *Handler) ListRoutes(w http.ResponseWriter, r *http.Request) {
-	items, err := h.Store.ListRoutes(r.Context())
+func (h *Handler) ListRoutes(c *gin.Context) {
+	items, err := h.Store.ListRoutes(c.Request.Context())
 	if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	c.JSON(http.StatusOK, map[string]any{"items": items})
 }

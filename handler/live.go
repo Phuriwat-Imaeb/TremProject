@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/gin-gonic/gin"
 
 	"jongkookhub/store"
 )
@@ -50,24 +51,24 @@ func (h *Handler) notifyClosed(tripID int64) {
 }
 
 // TripLive  GET /api/trips/{id}/live  WebSocket ผังที่นั่งแบบสด
-func (h *Handler) TripLive(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(r, "id")
+func (h *Handler) TripLive(c *gin.Context) {
+	id, ok := pathID(c, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
+		writeError(c, http.StatusBadRequest, "BAD_ID", "เลขต้องเป็นตัวเลข")
 		return
 	}
 	// ตรวจว่ามีรอบนี้ก่อนเปลี่ยนเป็น WebSocket ไม่มีก็ตอบ 404 แบบ HTTP ธรรมดาได้
-	if _, err := h.Store.TripSeats(r.Context(), id); errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
+	if _, err := h.Store.TripSeats(c.Request.Context(), id); errors.Is(err, store.ErrNotFound) {
+		writeError(c, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 		return
 	} else if err != nil {
-		internal(w, err)
+		internal(c, err)
 		return
 	}
 
 	// CORS ไม่คุ้มครอง WebSocket: เบราว์เซอร์ส่ง Origin มาแต่ไม่บล็อกให้ library จึงตรวจ Origin เอง
 	// อนุญาตเฉพาะ host เดียวกับ API หรือที่อยู่ใน ALLOWED_ORIGINS (กันเว็บอื่นแอบต่อแทนผู้ใช้)
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: h.WSOrigins})
+	conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{OriginPatterns: h.WSOrigins})
 	if err != nil {
 		return // Accept ตอบ 403/400 ให้แล้ว
 	}
@@ -78,7 +79,7 @@ func (h *Handler) TripLive(w http.ResponseWriter, r *http.Request) {
 	defer stop()
 
 	// หน้าเว็บไม่ส่งอะไรมา CloseRead อ่านทิ้งให้ และยกเลิก ctx ทันทีที่ฝั่งเบราว์เซอร์ปิดการเชื่อมต่อ
-	ctx := conn.CloseRead(r.Context())
+	ctx := conn.CloseRead(c.Request.Context())
 
 	send := func(msg []byte) error {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

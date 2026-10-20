@@ -12,12 +12,11 @@ import (
 
 	"github.com/coder/websocket"
 
-	"jongkookhub/mw"
 	"jongkookhub/store"
 )
 
 // เทสต์ WebSocket ต้องมีเซิร์ฟเวอร์จริง (httptest.NewServer) เพราะต้องเปลี่ยนการเชื่อมต่อเป็น WebSocket
-// ครอบ mw.Logging ไว้ด้วย เพื่อเช็กว่า recorder ส่งต่อ Hijack ได้จริง (ไม่งั้นได้ 501)
+// router ของ Gin มี mw.Logging อยู่ข้างใน เทสต์นี้จึงเช็กไปด้วยว่า WebSocket ยึดการเชื่อมต่อผ่าน middleware ได้
 
 type liveMsg struct {
 	Type   string
@@ -55,7 +54,7 @@ func dialLive(t *testing.T, base string, tripID int64) func() liveMsg {
 
 func TestLiveSeats(t *testing.T) {
 	srv, tickets := newTestServer(t)
-	ts := httptest.NewServer(mw.Logging(srv))
+	ts := httptest.NewServer(srv)
 	defer ts.Close()
 	ton, _ := tickets.Issue(4, "member")
 
