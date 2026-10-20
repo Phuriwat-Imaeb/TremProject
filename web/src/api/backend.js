@@ -87,3 +87,19 @@ export function adminListMembers(token) {
 export function setMemberRole(id, role, token) {
   return apiFetch(`/api/admin/members/${id}/role`, { method: 'PUT', body: { role }, token });
 }
+
+// ---------- เส้นทางและรอบรถ (ใครก็ดูได้) ----------
+export function listRoutes() {
+  return apiFetch('/api/routes'); // ได้ { items }
+}
+// รอบที่ยังจองได้ routeId/date ไม่ส่ง = ไม่กรอง ได้ { items }
+export function listTrips({ routeId, date } = {}) {
+  return apiFetch(withQuery('/api/trips', { routeId, date }));
+}
+export function getTrip(id) {
+  return apiFetch(`/api/trips/${id}`);
+}
+// ผังที่นั่ง ได้ { tripId, kind, seatCount, taken: [เลขที่ไม่ว่าง] }
+export function getTripSeats(id) {
+  return apiFetch(`/api/trips/${id}/seats`);
+}

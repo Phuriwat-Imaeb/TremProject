@@ -25,6 +25,9 @@ function Navbar() {
   // ลิงก์ชุดเดียวใช้ทั้งสองขนาดจอ ต่างกันแค่การจัดวาง
   const links = (
     <>
+      <NavLink to="/trips" className={linkClass}>
+        จองตั๋ว
+      </NavLink>
       <NavLink to="/articles" className={linkClass}>
         บทความ
       </NavLink>

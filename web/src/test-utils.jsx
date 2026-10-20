@@ -43,3 +43,17 @@ export const article = (id, title, published = true) => ({
 
 // หน้ารายการแบบแบ่งหน้า { items, page, pageSize, total }
 export const pageOf = (items, { page = 1, total = items.length } = {}) => ({ items, page, pageSize: 10, total });
+
+// รอบรถปลอมหน้าตาเหมือนที่ server ตอบ (รอบ 1 ใน seed.sql: รถตู้ 13 ที่ ราคา 80)
+export const trip = (id, overrides = {}) => ({
+  id,
+  route: { id: 1, origin: 'กรุงเทพฯ (หมอชิต)', destination: 'นครปฐม', durationMin: 60 },
+  vehicle: { id: 1, plate: '10-1234 กทม', kind: 'van', seatCount: 13 },
+  departAt: '2026-10-21T07:00:00+07:00',
+  arriveAt: '2026-10-21T08:00:00+07:00',
+  priceBaht: 80,
+  status: 'scheduled',
+  departed: false,
+  seatsLeft: 10,
+  ...overrides,
+});

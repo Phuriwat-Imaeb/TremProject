@@ -82,6 +82,8 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
 - `GET /api/routes` เส้นทางรถทั้งหมด
+- รอบรถ: `GET /api/trips?routeId=&date=YYYY-MM-DD` (เฉพาะรอบที่ยังจองได้ วันที่ตามเวลาไทย), `GET /api/trips/{id}`,
+  `GET /api/trips/{id}/seats` ผังที่นั่ง `{ kind, seatCount, taken }`
 - บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
   และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
   หน้ารายการรับ `?q=คำค้น&page=เลขหน้า` หน้าละ 10 ตอบ `{ items, page, pageSize, total }`
@@ -91,6 +93,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
+- `/trips` ค้นหารอบรถตามเส้นทาง/วัน (ตัวกรองอยู่ใน URL), `/trips/:id` รายละเอียดรอบ + ผังที่นั่ง เลือกที่นั่งได้ (ปุ่มจองมาในขั้นถัดไป)
 - `/articles`, `/articles/:id` อ่านบทความ
 - `/articles` ค้นหาและเลื่อนหน้าได้ คำค้นกับเลขหน้าอยู่ใน URL (`?q=&page=`) กด back ได้ แชร์ลิงก์ได้
 - หลังบ้าน `/admin` (เฉพาะ admin) มีแท็บ: `/admin/articles` จัดการบทความ (ค้นหาได้ รวมฉบับร่าง),

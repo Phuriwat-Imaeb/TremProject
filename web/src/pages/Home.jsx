@@ -9,6 +9,12 @@ function Home() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+      <p>
+        จองที่นั่งรถตู้และรถทัวร์ เลือกที่นั่งได้เองจากผังรถ{' '}
+        <Link to="/trips" className="font-medium text-teal-700 hover:underline">
+          ค้นหารอบรถ →
+        </Link>
+      </p>
       {isLoggedIn ? (
         <p>
           สวัสดี {member?.displayName}{' '}

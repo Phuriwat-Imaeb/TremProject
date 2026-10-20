@@ -219,3 +219,72 @@ func TestAdminMembers(t *testing.T) {
 	// คืนค่าเดิม เทสต์อื่นและ seed จะได้ไม่เพี้ยน
 	call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "member"}, nil)
 }
+
+func TestRoutesAndTrips(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	var routes struct{ Items []store.Route }
+	if code := call(t, srv, "GET", "/api/routes", "", nil, &routes); code != 200 || len(routes.Items) != 4 || routes.Items[0].ID != 1 {
+		t.Errorf("ต้องได้ 4 เส้นทาง เรียงตาม id ได้ %d %+v", code, routes.Items)
+	}
+
+	// seed.sql คิดเวลาออกจาก "วันนี้" ตามเวลาไทย พรุ่งนี้บนเส้นทาง 1 มีรอบ 1 (07:00) และ 2 (09:00)
+	// รอบ 6 ถูกยกเลิก รอบ 7 ออกไปเมื่อวาน ต้องไม่โผล่
+	tomorrow := time.Now().In(time.FixedZone("ICT", 7*3600)).AddDate(0, 0, 1).Format(time.DateOnly)
+	var list struct{ Items []store.Trip }
+	if code := call(t, srv, "GET", "/api/trips?routeId=1&date="+tomorrow, "", nil, &list); code != 200 || len(list.Items) != 2 {
+		t.Fatalf("พรุ่งนี้เส้นทาง 1 ต้องมี 2 รอบ ได้ %d %d รอบ", code, len(list.Items))
+	}
+	first := list.Items[0]
+	if first.ID != 1 || list.Items[1].ID != 2 {
+		t.Errorf("ต้องเรียงตามเวลาออก ได้ id %d, %d", first.ID, list.Items[1].ID)
+	}
+	// รอบ 1 รถตู้ 13 ที่ จองไปแล้ว 3 ที่ (นิดา 1,2 ต้น 5)
+	if first.SeatsLeft != 10 || first.Vehicle.Kind != "van" || first.Route.Destination != "นครปฐม" || first.Departed {
+		t.Errorf("รายละเอียดรอบ 1 ไม่ตรง seed: %+v", first)
+	}
+	if got := first.ArriveAt.Sub(first.DepartAt); got != time.Hour {
+		t.Errorf("arriveAt ต้องเท่ากับเวลาออก + 60 นาที ได้ห่างกัน %v", got)
+	}
+
+	// ไม่ส่งตัวกรอง = ทุกรอบที่ยังจองได้ คือรอบ 1–5
+	if code := call(t, srv, "GET", "/api/trips", "", nil, &list); code != 200 || len(list.Items) != 5 {
+		t.Errorf("ไม่กรอง ต้องได้ 5 รอบ ได้ %d %d รอบ", code, len(list.Items))
+	}
+	for _, bad := range []string{"routeId=abc", "routeId=0", "routeId=99999", "date=2026-13-01", "date=21-10-2026"} {
+		var e struct{ Error struct{ Code string } }
+		if code := call(t, srv, "GET", "/api/trips?"+bad, "", nil, &e); code != 400 || e.Error.Code != "BAD_FILTER" {
+			t.Errorf("%s ต้องได้ 400 BAD_FILTER ได้ %d %s", bad, code, e.Error.Code)
+		}
+	}
+
+	// รอบที่ออกไปแล้วยังเปิดดูทีละรอบได้ (หน้าตั๋วย้อนหลัง)
+	var past store.Trip
+	if code := call(t, srv, "GET", "/api/trips/7", "", nil, &past); code != 200 || !past.Departed {
+		t.Errorf("รอบ 7 ต้องได้ 200 และ departed = true ได้ %d %+v", code, past)
+	}
+	if code := call(t, srv, "GET", "/api/trips/999999", "", nil, nil); code != 404 {
+		t.Errorf("รอบที่ไม่มี ต้องได้ 404 ได้ %d", code)
+	}
+	if code := call(t, srv, "GET", "/api/trips/abc", "", nil, nil); code != 400 {
+		t.Errorf("id ไม่ใช่ตัวเลข ต้องได้ 400 ได้ %d", code)
+	}
+}
+
+func TestTripSeats(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	var m store.SeatMap
+	if code := call(t, srv, "GET", "/api/trips/1/seats", "", nil, &m); code != 200 ||
+		m.Kind != "van" || m.SeatCount != 13 || fmt.Sprint(m.Taken) != "[1 2 5]" {
+		t.Errorf("รอบ 1 ต้องไม่ว่าง [1 2 5] ได้ %d %+v", code, m)
+	}
+	// รอบ 5 ที่นั่ง 12 ถูกยกเลิกแล้ว ต้องว่าง และต้องได้ [] ไม่ใช่ null
+	var raw map[string]any
+	if code := call(t, srv, "GET", "/api/trips/5/seats", "", nil, &raw); code != 200 || fmt.Sprint(raw["taken"]) != "[]" {
+		t.Errorf("รอบ 5 ต้องได้ taken = [] ได้ %d %v", code, raw["taken"])
+	}
+	if code := call(t, srv, "GET", "/api/trips/999999/seats", "", nil, nil); code != 404 {
+		t.Errorf("รอบที่ไม่มี ต้องได้ 404 ได้ %d", code)
+	}
+}

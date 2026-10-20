@@ -12,6 +12,8 @@ import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
+import TripDetail from './pages/TripDetail';
+import Trips from './pages/Trips';
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/trips" element={<Trips />} />
+          <Route path="/trips/:id" element={<TripDetail />} />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:id" element={<ArticleDetail />} />
           {/* หลังบ้าน: ด่าน admin ครอบทั้งกลุ่มที่เดียว หน้าย่อยไปแสดงใน <Outlet /> ของ AdminLayout */}
