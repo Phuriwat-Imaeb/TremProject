@@ -21,20 +21,20 @@ test('แถวของตัวเองเปลี่ยนบทบาท�
 });
 
 test('เลือกบทบาทใหม่ ต้องถามยืนยันก่อน แล้วอัปเดตแถวพร้อมข้อความสำเร็จ', async () => {
-  api.setMemberRole.mockResolvedValue({ ...nida, role: 'rescuer' });
+  api.setMemberRole.mockResolvedValue({ ...nida, role: 'staff' });
   renderWithProviders(<AdminMembers />);
   const select = await screen.findByRole('combobox', { name: 'บทบาทของ นิดา' });
 
-  await userEvent.selectOptions(select, 'rescuer');
+  await userEvent.selectOptions(select, 'staff');
   const dialog = screen.getByRole('dialog', { name: 'เปลี่ยนบทบาท?' });
-  expect(dialog).toHaveTextContent('สมาชิก → ผู้ช่วยเหลือสัตว์');
+  expect(dialog).toHaveTextContent('สมาชิก → พนักงาน');
   expect(api.setMemberRole).not.toHaveBeenCalled();
   expect(select).toHaveValue('member'); // ยังไม่ยืนยัน ค่าในดรอปดาวน์ยังเป็นของเดิม
 
   await userEvent.click(within(dialog).getByRole('button', { name: 'เปลี่ยน' }));
-  expect(await screen.findByText(/นิดา เป็นผู้ช่วยเหลือสัตว์แล้ว/)).toBeInTheDocument();
-  expect(api.setMemberRole).toHaveBeenCalledWith(3, 'rescuer', 'tok');
-  expect(select).toHaveValue('rescuer');
+  expect(await screen.findByText(/นิดา เป็นพนักงานแล้ว/)).toBeInTheDocument();
+  expect(api.setMemberRole).toHaveBeenCalledWith(3, 'staff', 'tok');
+  expect(select).toHaveValue('staff');
 });
 
 test('server ไม่ยอม (เช่น 409) บทบาทในดรอปดาวน์คงเดิม และบอกเหตุผล', async () => {

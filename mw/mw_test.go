@@ -78,9 +78,9 @@ func TestOptionalLogin(t *testing.T) {
 }
 
 func TestRequireRole(t *testing.T) {
-	h := RequireLogin(iss, RequireRole(echoWho, "rescuer", "admin"))
+	h := RequireLogin(iss, RequireRole(echoWho, "staff", "admin"))
 
-	for role, want := range map[string]int{"member": 403, "rescuer": 200, "admin": 200} {
+	for role, want := range map[string]int{"member": 403, "staff": 200, "admin": 200} {
 		token, _ := iss.Issue(1, role)
 		status, _, _ := call(h, "Bearer "+token)
 		if status != want {

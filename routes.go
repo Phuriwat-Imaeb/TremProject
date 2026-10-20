@@ -18,8 +18,7 @@ func routes(h *handler.Handler, tickets *auth.Issuer) *http.ServeMux {
 	mux.HandleFunc("POST /api/auth/register", h.Register)
 	mux.HandleFunc("POST /api/auth/login", h.Login)
 	mux.HandleFunc("GET /api/me", login(h.Me))
-	mux.HandleFunc("GET /api/species", h.ListSpecies)
-	mux.HandleFunc("GET /api/areas", h.ListAreas)
+	mux.HandleFunc("GET /api/routes", h.ListRoutes)
 
 	mux.HandleFunc("GET /api/articles", maybe(h.ListArticles))
 	mux.HandleFunc("GET /api/articles/{id}", maybe(h.GetArticle))

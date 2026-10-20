@@ -72,7 +72,7 @@ func OptionalLogin(iss *auth.Issuer, next http.HandlerFunc) http.HandlerFunc {
 }
 
 // RequireRole ด่านตรวจบทบาท ต้องวางไว้ข้างใน RequireLogin เสมอ (ต้องรู้ก่อนว่าเป็นใคร)
-// รับได้หลายบทบาท เช่น RequireRole(h.X, "rescuer", "admin") ไม่ตรงสักอัน → 403
+// รับได้หลายบทบาท เช่น RequireRole(h.X, "staff", "admin") ไม่ตรงสักอัน → 403
 func RequireRole(next http.HandlerFunc, roles ...string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !slices.Contains(roles, WhoFrom(r.Context()).Role) {

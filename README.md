@@ -34,7 +34,7 @@ npm start          # เปิด http://localhost:3000
 ถ้า Go รันอยู่ที่อื่นให้ตั้ง `API_PROXY_TARGET` ส่วนตอน deploy ให้ตั้ง `REACT_APP_API_URL` (ดู [web/.env.example](web/.env.example))
 
 บัญชีทดสอบจาก `seed.sql` ใช้รหัสผ่าน `password123` ทุกบัญชี:
-`admin@petfinder.test` (admin), `rescue@petfinder.test` (rescuer),
+`admin@tremproject.test` (admin), `staff@tremproject.test` (staff),
 `nida@example.com` และ `ton@example.com` (member)
 
 ## ตัวแปรระบบ
@@ -57,7 +57,7 @@ npm start          # เปิด http://localhost:3000
    - `ALLOWED_ORIGINS` = ใส่อะไรก็ได้ไปก่อน (เช่น `http://localhost:3000`) ได้ URL ของ Vercel แล้วค่อยมาแก้
    - `JWT_SECRET` Render สุ่มให้เอง
 
-   เสร็จแล้วเปิด `https://<ชื่อ>.onrender.com/api/species` ต้องได้ JSON
+   เสร็จแล้วเปิด `https://<ชื่อ>.onrender.com/api/routes` ต้องได้ JSON
 3. **Vercel**: Add New → Project → เลือก repo นี้ ตั้ง Root Directory เป็น `web`
    และตั้ง Environment Variable `REACT_APP_API_URL` = URL ของ Render (ไม่ต้องมี `/` ท้าย)
    ([web/vercel.json](web/vercel.json) ทำให้รีเฟรชหน้า `/login`, `/me` แล้วไม่ 404)
@@ -81,7 +81,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 ## เส้นทางที่ทำแล้ว
 
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
-- `GET /api/species`, `GET /api/areas`
+- `GET /api/routes` เส้นทางรถทั้งหมด
 - บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
   และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
   หน้ารายการรับ `?q=คำค้น&page=เลขหน้า` หน้าละ 10 ตอบ `{ items, page, pageSize, total }`

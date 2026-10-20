@@ -213,8 +213,8 @@ func TestAdminMembers(t *testing.T) {
 	}
 
 	var m store.Member
-	if code := call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "rescuer"}, &m); code != 200 || m.Role != "rescuer" {
-		t.Errorf("เปลี่ยนเป็น rescuer ต้องได้ 200 ได้ %d %+v", code, m)
+	if code := call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "staff"}, &m); code != 200 || m.Role != "staff" {
+		t.Errorf("เปลี่ยนเป็น staff ต้องได้ 200 ได้ %d %+v", code, m)
 	}
 	// คืนค่าเดิม เทสต์อื่นและ seed จะได้ไม่เพี้ยน
 	call(t, srv, "PUT", "/api/admin/members/3/role", admin, map[string]string{"role": "member"}, nil)

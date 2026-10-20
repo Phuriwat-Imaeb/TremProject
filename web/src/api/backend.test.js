@@ -11,10 +11,10 @@ beforeEach(() => {
 
 test('ไม่มี token ต้องไม่แนบ Authorization', async () => {
   fetch.mockResolvedValue(fakeResponse(200, { items: [] }));
-  const data = await apiFetch('/api/species');
+  const data = await apiFetch('/api/routes');
   expect(data).toEqual({ items: [] });
   const [url, options] = fetch.mock.calls[0];
-  expect(url).toBe('/api/species');
+  expect(url).toBe('/api/routes');
   expect(options.headers.Authorization).toBeUndefined();
 });
 
@@ -46,7 +46,7 @@ test('error แบบ Go { error: { code, message } } ได้ข้อคว�
 
 test('server ตอบไม่เป็น JSON ได้ข้อความภาษาคน', async () => {
   fetch.mockResolvedValue({ ok: false, status: 502, json: () => Promise.reject(new SyntaxError('Unexpected token <')) });
-  await expect(apiFetch('/api/species')).rejects.toThrow('server ไม่ได้ตอบเป็น JSON');
+  await expect(apiFetch('/api/routes')).rejects.toThrow('server ไม่ได้ตอบเป็น JSON');
 });
 
 test('401 ของคำขอที่แนบตั๋ว เรียกตัวจัดการตั๋วหมดอายุ แต่ 401 ที่ไม่ได้แนบตั๋ว (login รหัสผิด) ไม่เรียก', async () => {

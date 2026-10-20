@@ -5,4 +5,4 @@
 export const APP_NAME = 'PetFinder';
 
 // บทบาทสมาชิก ต้องตรงกับ CHECK ของตาราง members ใน db/schema.sql
-export const ROLE_LABEL = { member: 'สมาชิก', rescuer: 'ผู้ช่วยเหลือสัตว์', admin: 'ผู้ดูแลระบบ' };
+export const ROLE_LABEL = { member: 'สมาชิก', staff: 'พนักงาน', admin: 'ผู้ดูแลระบบ' };

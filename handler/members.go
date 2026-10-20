@@ -10,7 +10,7 @@ import (
 )
 
 // บทบาทที่ตั้งได้ ต้องตรงกับ CHECK ของตาราง members ใน schema.sql
-var roles = []string{"member", "rescuer", "admin"}
+var roles = []string{"member", "staff", "admin"}
 
 // AdminListMembers  GET /api/admin/members  สมาชิกทั้งหมด เรียงตาม id
 func (h *Handler) AdminListMembers(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +39,7 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !slices.Contains(roles, req.Role) {
-		writeError(w, http.StatusBadRequest, "BAD_STATUS", "บทบาทต้องเป็น member, rescuer หรือ admin")
+		writeError(w, http.StatusBadRequest, "BAD_STATUS", "บทบาทต้องเป็น member, staff หรือ admin")
 		return
 	}
 	// กันแอดมินลดสิทธิ์ตัวเองจนระบบไม่เหลือแอดมิน
