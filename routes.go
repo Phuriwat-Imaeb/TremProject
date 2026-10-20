@@ -12,6 +12,7 @@ import (
 func routes(h *handler.Handler, tickets *auth.Issuer) *http.ServeMux {
 	login := func(f http.HandlerFunc) http.HandlerFunc { return mw.RequireLogin(tickets, f) }
 	maybe := func(f http.HandlerFunc) http.HandlerFunc { return mw.OptionalLogin(tickets, f) }
+	staff := func(f http.HandlerFunc) http.HandlerFunc { return login(mw.RequireRole(f, "staff", "admin")) }
 	admin := func(f http.HandlerFunc) http.HandlerFunc { return login(mw.RequireRole(f, "admin")) }
 
 	mux := http.NewServeMux()
@@ -35,7 +36,21 @@ func routes(h *handler.Handler, tickets *auth.Issuer) *http.ServeMux {
 	mux.HandleFunc("PUT /api/admin/articles/{id}", admin(h.UpdateArticle))
 	mux.HandleFunc("DELETE /api/admin/articles/{id}", admin(h.DeleteArticle))
 
+	mux.HandleFunc("GET /api/staff/trips", staff(h.StaffListTrips))
+	mux.HandleFunc("POST /api/staff/trips", staff(h.CreateTrip))
+	mux.HandleFunc("PUT /api/staff/trips/{id}", staff(h.UpdateTrip))
+	mux.HandleFunc("POST /api/staff/trips/{id}/cancel", staff(h.CancelTrip))
+	mux.HandleFunc("GET /api/staff/trips/{id}/passengers", staff(h.TripPassengers))
+	mux.HandleFunc("GET /api/staff/vehicles", staff(h.StaffListVehicles))
+
 	mux.HandleFunc("GET /api/admin/members", admin(h.AdminListMembers))
 	mux.HandleFunc("PUT /api/admin/members/{id}/role", admin(h.SetMemberRole))
+
+	mux.HandleFunc("POST /api/admin/routes", admin(h.CreateRoute))
+	mux.HandleFunc("PUT /api/admin/routes/{id}", admin(h.UpdateRoute))
+	mux.HandleFunc("DELETE /api/admin/routes/{id}", admin(h.DeleteRoute))
+	mux.HandleFunc("POST /api/admin/vehicles", admin(h.CreateVehicle))
+	mux.HandleFunc("PUT /api/admin/vehicles/{id}", admin(h.UpdateVehicle))
+	mux.HandleFunc("DELETE /api/admin/vehicles/{id}", admin(h.DeleteVehicle))
 	return mux
 }

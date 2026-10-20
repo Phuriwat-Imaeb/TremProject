@@ -100,6 +100,7 @@ func (s *Store) CreateBooking(ctx context.Context, memberID, tripID int64, seats
 
 	// 1) อ่านรอบรถพร้อมล็อกแถวแบบ FOR SHARE: คนจองหลายคนถือล็อกนี้พร้อมกันได้
 	//    แต่ staff ที่จะยกเลิกรอบ (UPDATE แถวนี้) ต้องรอจนการจองนี้จบก่อน จึงไม่มีการจองหลุดเข้ารอบที่เพิ่งถูกยกเลิก
+	//    ล็อกแถวรถ (v) ด้วย: admin ที่จะลดจำนวนที่นั่ง (UpdateVehicle) ต้องรอ ไม่งั้นเลขที่นั่งที่เราเพิ่งตรวจว่าไม่เกินจะเกินได้
 	var status string
 	var departed bool
 	var price int
@@ -108,7 +109,7 @@ func (s *Store) CreateBooking(ctx context.Context, memberID, tripID int64, seats
 		`SELECT t.status, t.depart_at <= now(), t.price_baht, v.seat_count
 		   FROM trips t JOIN vehicles v ON v.id = t.vehicle_id
 		  WHERE t.id = $1
-		    FOR SHARE OF t`, tripID).Scan(&status, &departed, &price, &seatCount)
+		    FOR SHARE OF t, v`, tripID).Scan(&status, &departed, &price, &seatCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Booking{}, ErrNotFound
 	}

@@ -17,3 +17,10 @@ export const baht = (n) => `${n.toLocaleString('th-TH')} บาท`;
 export const todayInThai = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
 
 export const VEHICLE_LABEL = { van: 'รถตู้', bus: 'รถทัวร์' };
+
+// ช่อง <input type="datetime-local"> ใช้ค่า "YYYY-MM-DDTHH:mm" ไม่มีเขตเวลา ระบบนี้ถือว่าเป็นเวลาไทยเสมอ
+// ISO จาก server → ค่าในช่อง (sv-SE ได้รูปแบบ "2026-10-21 07:00:00" พอดี แค่เปลี่ยนช่องว่างเป็น T)
+export const toThaiInput = (iso) =>
+  new Date(iso).toLocaleString('sv-SE', { timeZone: TZ }).replace(' ', 'T').slice(0, 16);
+// ค่าในช่อง → ISO พร้อม +07:00 ส่งให้ server
+export const fromThaiInput = (value) => `${value}:00+07:00`;

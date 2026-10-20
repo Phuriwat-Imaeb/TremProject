@@ -417,7 +417,7 @@ paths:
   /api/staff/trips:
     get:
       tags: [Staff]
-      summary: รอบรถทั้งหมด รวมที่ยกเลิกและออกไปแล้ว (แบ่งหน้า หน้าละ 20)
+      summary: รอบรถทั้งหมด รวมที่ยกเลิกและออกไปแล้ว (แบ่งหน้า หน้าละ 10)
       description: ส่ง date = เรียงตามเวลาออกของวันนั้น ไม่ส่ง = รอบที่ออกล่าสุดก่อน
       security:
         - bearerAuth: []
@@ -1353,7 +1353,7 @@ components:
           example: 1
         pageSize:
           type: integer
-          example: 20
+          example: 10
         total:
           type: integer
           example: 7

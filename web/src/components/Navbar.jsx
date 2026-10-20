@@ -31,7 +31,7 @@ function Navbar() {
       <NavLink to="/articles" className={linkClass}>
         บทความ
       </NavLink>
-      {member?.role === 'admin' && (
+      {(member?.role === 'staff' || member?.role === 'admin') && (
         <NavLink to="/admin" className={linkClass}>
           หลังบ้าน
         </NavLink>

@@ -88,6 +88,13 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
   `GET /api/bookings/{id}` (ของตัวเอง หรือ staff/admin ดูได้ทุกรายการ),
   `POST /api/bookings/{id}/cancel` ยกเลิกของตัวเองได้จนถึงเวลารถออก ที่นั่งกลับมาว่างทันที,
   `GET /api/me/bookings?page=` การจองของฉัน หน้าละ 10
+- หลังบ้านพนักงาน (staff หรือ admin): `GET /api/staff/trips?routeId=&date=&page=` ทุกรอบรวมที่ปิดแล้ว,
+  `POST /api/staff/trips` เพิ่มรอบ (รถคันเดิมเวลาเดิมตอบ 409 `VEHICLE_BUSY`), `PUT /api/staff/trips/{id}` แก้เวลาออก/ราคา,
+  `POST /api/staff/trips/{id}/cancel` ยกเลิกรอบพร้อมการจองทั้งหมดใน transaction เดียว,
+  `GET /api/staff/trips/{id}/passengers` รายชื่อผู้โดยสาร, `GET /api/staff/vehicles` คันรถ
+- เส้นทางและคันรถ (เฉพาะ admin): `POST /api/admin/routes`, `PUT`/`DELETE /api/admin/routes/{id}`,
+  `POST /api/admin/vehicles`, `PUT`/`DELETE /api/admin/vehicles/{id}`
+  ซ้ำตอบ 409 `DUPLICATE`, ลบของที่มีรอบรถใช้อยู่ตอบ 409 `IN_USE`, ลดที่นั่งจนชนที่จองไว้ตอบ 409 `SEATS_IN_USE`
 - บทความ: `GET /api/articles`, `GET /api/articles/{id}` (ใครก็อ่านได้ เห็นแค่ที่เผยแพร่แล้ว)
   และ `GET`/`POST /api/admin/articles`, `GET`/`PUT`/`DELETE /api/admin/articles/{id}` (เฉพาะ admin)
   หน้ารายการรับ `?q=คำค้น&page=เลขหน้า` หน้าละ 10 ตอบ `{ items, page, pageSize, total }`
@@ -101,8 +108,12 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `/bookings` การจองของฉัน (แบ่งหน้า), `/bookings/:id` หน้าตั๋ว + ปุ่มยกเลิกการจอง (ต้องเข้าสู่ระบบ)
 - `/articles`, `/articles/:id` อ่านบทความ
 - `/articles` ค้นหาและเลื่อนหน้าได้ คำค้นกับเลขหน้าอยู่ใน URL (`?q=&page=`) กด back ได้ แชร์ลิงก์ได้
-- หลังบ้าน `/admin` (เฉพาะ admin) มีแท็บ: `/admin/articles` จัดการบทความ (ค้นหาได้ รวมฉบับร่าง),
-  `/admin/articles/new` เขียนใหม่, `/admin/articles/:id/edit` แก้ไข, `/admin/members` เปลี่ยนบทบาทสมาชิก
+- หลังบ้าน `/admin` (staff กับ admin เข้าได้ เปิดแล้วไปแท็บรอบรถ):
+  - `/admin/trips` จัดการรอบรถ กรองเส้นทาง/วันได้ ย้อนดูรอบเก่าได้ ยกเลิกรอบได้,
+    `/admin/trips/new` เพิ่มรอบ, `/admin/trips/:id/edit` แก้เวลา/ราคา, `/admin/trips/:id/passengers` รายชื่อผู้โดยสาร
+  - เฉพาะ admin: `/admin/routes` เส้นทาง, `/admin/vehicles` คันรถ (เพิ่ม/แก้/ลบในหน้าเดียว),
+    `/admin/articles` จัดการบทความ (ค้นหาได้ รวมฉบับร่าง), `/admin/articles/new` เขียนใหม่,
+    `/admin/articles/:id/edit` แก้ไข, `/admin/members` เปลี่ยนบทบาทสมาชิก
 - URL ที่ไม่มีอยู่ขึ้นหน้า 404
 - ตั๋วหมดอายุระหว่างใช้งาน (ได้ 401) จะออกจากระบบให้ พาไป `/login` พร้อมบอกเหตุผล แล้วกลับหน้าเดิมหลังเข้าสู่ระบบใหม่
 

@@ -120,3 +120,49 @@ export function listMyBookings({ page } = {}, token) {
 export function cancelBooking(id, token) {
   return apiFetch(`/api/bookings/${id}/cancel`, { method: 'POST', token });
 }
+
+// ---------- หลังบ้าน: รอบรถ (staff หรือ admin) ----------
+// ทุกรอบ รวมที่ยกเลิก/ออกไปแล้ว ได้ { items, page, pageSize, total }
+export function staffListTrips({ routeId, date, page } = {}, token) {
+  return apiFetch(withQuery('/api/staff/trips', { routeId, date, page }), { token });
+}
+// input = { routeId, vehicleId, departAt, priceBaht } ชนรอบเดิม → 'VEHICLE_BUSY'
+export function createTrip(input, token) {
+  return apiFetch('/api/staff/trips', { method: 'POST', body: input, token });
+}
+// แก้ได้แค่ { departAt, priceBaht }
+export function updateTrip(id, input, token) {
+  return apiFetch(`/api/staff/trips/${id}`, { method: 'PUT', body: input, token });
+}
+// การจองทั้งรอบถูกยกเลิกไปด้วย
+export function cancelTrip(id, token) {
+  return apiFetch(`/api/staff/trips/${id}/cancel`, { method: 'POST', token });
+}
+// ได้ { trip, items: [{ bookingId, member, seats, totalBaht, createdAt }] }
+export function tripPassengers(id, token) {
+  return apiFetch(`/api/staff/trips/${id}/passengers`, { token });
+}
+export function staffListVehicles(token) {
+  return apiFetch('/api/staff/vehicles', { token });
+}
+
+// ---------- หลังบ้าน: เส้นทางและคันรถ (เฉพาะ admin) ----------
+// ซ้ำ → 'DUPLICATE', ลบของที่มีรอบรถใช้อยู่ → 'IN_USE', ลดที่นั่งจนชนที่จองแล้ว → 'SEATS_IN_USE'
+export function createRoute(input, token) {
+  return apiFetch('/api/admin/routes', { method: 'POST', body: input, token });
+}
+export function updateRoute(id, input, token) {
+  return apiFetch(`/api/admin/routes/${id}`, { method: 'PUT', body: input, token });
+}
+export function deleteRoute(id, token) {
+  return apiFetch(`/api/admin/routes/${id}`, { method: 'DELETE', token });
+}
+export function createVehicle(input, token) {
+  return apiFetch('/api/admin/vehicles', { method: 'POST', body: input, token });
+}
+export function updateVehicle(id, input, token) {
+  return apiFetch(`/api/admin/vehicles/${id}`, { method: 'PUT', body: input, token });
+}
+export function deleteVehicle(id, token) {
+  return apiFetch(`/api/admin/vehicles/${id}`, { method: 'DELETE', token });
+}

@@ -1,41 +1,13 @@
-import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import * as api from '../api/backend';
 import Alert from '../components/Alert';
-import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import Field from '../components/Field';
 import Loading from '../components/Loading';
 import PageHeader from '../components/PageHeader';
+import TripFilterForm from '../components/TripFilterForm';
 import { baht, thaiDay, thaiTime, todayInThai, VEHICLE_LABEL } from '../format';
 import useApi from '../hooks/useApi';
 import usePageTitle from '../hooks/usePageTitle';
-
-// ฟอร์มเลือกเส้นทาง + วันที่ ค่าในช่องเป็น state ของฟอร์มเอง กด "ค้นหา" ถึงจะเขียนลง URL
-function SearchForm({ routes, routeId, date, onSearch }) {
-  const [form, setForm] = useState({ routeId, date });
-  const set = (name) => (e) => setForm((f) => ({ ...f, [name]: e.target.value }));
-
-  function submit(e) {
-    e.preventDefault();
-    onSearch(form);
-  }
-
-  return (
-    <form onSubmit={submit} className="mb-6 grid gap-3 rounded-md border border-gray-200 bg-white p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-      <Field as="select" label="เส้นทาง" value={form.routeId} onChange={set('routeId')}>
-        <option value="">ทุกเส้นทาง</option>
-        {routes.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.origin} → {r.destination}
-          </option>
-        ))}
-      </Field>
-      <Field type="date" label="วันเดินทาง" min={todayInThai()} value={form.date} onChange={set('date')} />
-      <Button type="submit">ค้นหา</Button>
-    </form>
-  );
-}
 
 function TripCard({ trip }) {
   const full = trip.seatsLeft === 0;
@@ -82,11 +54,12 @@ function Trips() {
     <div>
       <PageHeader title="ค้นหารอบรถ" />
       {/* key: กด back จน URL เปลี่ยน ฟอร์มต้องเปลี่ยนตาม */}
-      <SearchForm
+      <TripFilterForm
         key={`${routeId}|${date}`}
         routes={routes.data?.items ?? []}
         routeId={routeId}
         date={date}
+        minDate={todayInThai()}
         onSearch={search}
       />
       {routes.error && <Alert>โหลดรายชื่อเส้นทางไม่สำเร็จ: {routes.error.message}</Alert>}

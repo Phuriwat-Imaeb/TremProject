@@ -2,7 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as api from './api/backend';
 import App from './App';
-import { admin, loginAs, nida, pageOf, renderWithProviders } from './test-utils';
+import { admin, loginAs, nida, pageOf, renderWithProviders, staff } from './test-utils';
 
 jest.mock('./api/backend');
 
@@ -55,25 +55,45 @@ test('เมนูมือถือ กดเปิดแล้วเห็น�
   expect(document.getElementById('mobile-menu')).not.toBeInTheDocument();
 });
 
-test('ลิงก์หลังบ้านเห็นเฉพาะ admin', () => {
+test('ลิงก์หลังบ้านเห็นเฉพาะ staff กับ admin', () => {
   loginAs(nida);
   const { unmount } = renderApp('/');
   expect(screen.queryByRole('link', { name: 'หลังบ้าน' })).not.toBeInTheDocument();
   unmount();
 
-  loginAs(admin);
-  renderApp('/');
-  expect(screen.getByRole('link', { name: 'หลังบ้าน' })).toHaveAttribute('href', '/admin');
+  for (const who of [staff, admin]) {
+    loginAs(who);
+    const { unmount: done } = renderApp('/');
+    expect(screen.getByRole('link', { name: 'หลังบ้าน' })).toHaveAttribute('href', '/admin');
+    done();
+  }
 });
 
-test('เข้า /admin เฉย ๆ พาไปแท็บบทความ และสลับไปแท็บสมาชิกได้', async () => {
+test('admin: เข้า /admin เฉย ๆ พาไปแท็บรอบรถ และสลับไปแท็บสมาชิกได้', async () => {
   loginAs(admin);
-  api.adminListArticles.mockResolvedValue(pageOf([]));
+  api.listRoutes.mockResolvedValue({ items: [] });
+  api.staffListTrips.mockResolvedValue(pageOf([]));
   api.adminListMembers.mockResolvedValue({ items: [admin, nida] });
   renderApp('/admin');
 
-  expect(await screen.findByRole('heading', { name: 'จัดการบทความ' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'จัดการรอบรถ' })).toBeInTheDocument();
   const tabs = screen.getByRole('navigation', { name: 'เมนูหลังบ้าน' });
   await act(async () => userEvent.click(within(tabs).getByRole('link', { name: 'สมาชิก' })));
   expect(await screen.findByRole('heading', { name: 'จัดการสมาชิก' })).toBeInTheDocument();
+});
+
+test('staff: เห็นแค่แท็บรอบรถ และเปิดหน้าบทความหลังบ้านไม่ได้', async () => {
+  loginAs(staff);
+  api.listRoutes.mockResolvedValue({ items: [] });
+  api.staffListTrips.mockResolvedValue(pageOf([]));
+  const { unmount } = renderApp('/admin');
+
+  expect(await screen.findByRole('heading', { name: 'จัดการรอบรถ' })).toBeInTheDocument();
+  const tabs = screen.getByRole('navigation', { name: 'เมนูหลังบ้าน' });
+  expect(within(tabs).getAllByRole('link').map((a) => a.textContent)).toEqual(['รอบรถ']);
+  unmount();
+
+  renderApp('/admin/articles');
+  expect(screen.getByText('บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้')).toBeInTheDocument();
+  expect(api.adminListArticles).not.toHaveBeenCalled();
 });

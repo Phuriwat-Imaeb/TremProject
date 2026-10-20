@@ -27,7 +27,8 @@ export function loginAs(member, token = 'tok') {
 }
 
 export const admin = { id: 1, email: 'admin@petfinder.test', displayName: 'แอดมิน', phone: null, role: 'admin' };
-export const nida = { id: 3, email: 'nida@example.com', displayName: 'นิดา', phone: '0898765432', role: 'member' };
+export const staff = { id: 2, email: 'staff@tremproject.test', displayName: 'พนักงานขายตั๋ว', phone: '0812345678', role: 'staff' };
+export const nida ={ id: 3, email: 'nida@example.com', displayName: 'นิดา', phone: '0898765432', role: 'member' };
 
 // บทความปลอมหน้าตาเหมือนที่ server ตอบ
 export const article = (id, title, published = true) => ({

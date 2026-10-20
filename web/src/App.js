@@ -1,10 +1,15 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminArticles from './pages/admin/AdminArticles';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminMembers from './pages/admin/AdminMembers';
+import AdminRoutes from './pages/admin/AdminRoutes';
+import AdminTrips from './pages/admin/AdminTrips';
+import AdminVehicles from './pages/admin/AdminVehicles';
 import ArticleForm from './pages/admin/ArticleForm';
+import TripForm from './pages/admin/TripForm';
+import TripPassengers from './pages/admin/TripPassengers';
 import ArticleDetail from './pages/ArticleDetail';
 import BookingDetail from './pages/BookingDetail';
 import MyBookings from './pages/MyBookings';
@@ -54,20 +59,35 @@ function App() {
           />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:id" element={<ArticleDetail />} />
-          {/* หลังบ้าน: ด่าน admin ครอบทั้งกลุ่มที่เดียว หน้าย่อยไปแสดงใน <Outlet /> ของ AdminLayout */}
+          {/* หลังบ้าน: ด่านชั้นนอกให้ staff กับ admin เข้าได้ หน้าย่อยไปแสดงใน <Outlet /> ของ AdminLayout
+              บทความกับสมาชิกมีด่าน admin ซ้อนอีกชั้น (server ก็ตรวจซ้ำ ตอบ 403) */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['staff', 'admin']}>
                 <AdminLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="articles" replace />} />
-            <Route path="articles" element={<AdminArticles />} />
-            <Route path="articles/new" element={<ArticleForm />} />
-            <Route path="articles/:id/edit" element={<ArticleForm />} />
-            <Route path="members" element={<AdminMembers />} />
+            <Route index element={<Navigate to="trips" replace />} />
+            <Route path="trips" element={<AdminTrips />} />
+            <Route path="trips/new" element={<TripForm />} />
+            <Route path="trips/:id/edit" element={<TripForm />} />
+            <Route path="trips/:id/passengers" element={<TripPassengers />} />
+            <Route
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <Outlet />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="routes" element={<AdminRoutes />} />
+              <Route path="vehicles" element={<AdminVehicles />} />
+              <Route path="articles" element={<AdminArticles />} />
+              <Route path="articles/new" element={<ArticleForm />} />
+              <Route path="articles/:id/edit" element={<ArticleForm />} />
+              <Route path="members" element={<AdminMembers />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

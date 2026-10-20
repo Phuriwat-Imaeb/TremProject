@@ -482,3 +482,126 @@ func TestCancelBooking(t *testing.T) {
 		t.Errorf("ไม่มีการจองนี้ต้องได้ 404 ได้ %d", code)
 	}
 }
+
+func TestStaffTrips(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	staff, _ := tickets.Issue(2, "staff") // id ตาม seed.sql: 2 = พนักงาน
+	member, _ := tickets.Issue(3, "member")
+
+	if code := call(t, srv, "GET", "/api/staff/trips", member, nil, nil); code != 403 {
+		t.Errorf("member ต้องได้ 403 ได้ %d", code)
+	}
+
+	// ทุกรอบ 7 รอบ ไม่เลือกวัน = ออกล่าสุดก่อน (รอบ 6 อีก 3 วัน), เลือกวัน = เรียงตามเวลาออก
+	var page struct {
+		Items       []store.Trip
+		Page, Total int
+	}
+	if code := call(t, srv, "GET", "/api/staff/trips", staff, nil, &page); code != 200 || page.Total != 7 || page.Items[0].ID != 6 {
+		t.Errorf("ต้องเห็น 7 รอบ รอบ 6 ก่อน ได้ %d total=%d", code, page.Total)
+	}
+	tomorrow := time.Now().In(time.FixedZone("ICT", 7*3600)).AddDate(0, 0, 1).Format(time.DateOnly)
+	call(t, srv, "GET", "/api/staff/trips?date="+tomorrow, staff, nil, &page)
+	if ids := fmt.Sprint(tripIDs(page.Items)); ids != "[1 2 3]" {
+		t.Errorf("พรุ่งนี้ต้องได้รอบ [1 2 3] เรียงตามเวลา ได้ %s", ids)
+	}
+
+	// เพิ่มรอบ: รถทัวร์ (คัน 3) อีก 5 วัน
+	depart := time.Now().Add(5 * 24 * time.Hour).Truncate(time.Minute)
+	newTrip := map[string]any{"routeId": 1, "vehicleId": 3, "departAt": depart, "priceBaht": 90}
+	var tr store.Trip
+	if code := call(t, srv, "POST", "/api/staff/trips", staff, newTrip, &tr); code != 201 || tr.SeatsLeft != 40 || tr.PriceBaht != 90 {
+		t.Fatalf("เพิ่มรอบต้องได้ 201 ได้ %d %+v", code, tr)
+	}
+	t.Cleanup(func() {
+		dbExec(t, `DELETE FROM bookings WHERE trip_id = $1`, tr.ID)
+		dbExec(t, `DELETE FROM trips WHERE id = $1`, tr.ID)
+	})
+
+	bad := []struct {
+		name string
+		body map[string]any
+		code int
+		err  string
+	}{
+		{"รถคันเดิมเวลาเดิม", newTrip, 409, "VEHICLE_BUSY"},
+		{"ไม่มีคันรถนี้", map[string]any{"routeId": 1, "vehicleId": 99, "departAt": depart, "priceBaht": 90}, 400, "BAD_REF"},
+		{"เวลาในอดีต", map[string]any{"routeId": 1, "vehicleId": 3, "departAt": time.Now().Add(-time.Hour), "priceBaht": 90}, 400, "BAD_TIME"},
+		{"ไม่ส่งราคา", map[string]any{"routeId": 1, "vehicleId": 3, "departAt": depart}, 400, "MISSING_FIELD"},
+		{"ไม่เลือกเส้นทาง", map[string]any{"vehicleId": 3, "departAt": depart, "priceBaht": 90}, 400, "MISSING_FIELD"},
+	}
+	for _, c := range bad {
+		var e struct{ Error struct{ Code string } }
+		if code := call(t, srv, "POST", "/api/staff/trips", staff, c.body, &e); code != c.code || e.Error.Code != c.err {
+			t.Errorf("%s: ต้องได้ %d %s ได้ %d %s", c.name, c.code, c.err, code, e.Error.Code)
+		}
+	}
+
+	// แก้เวลา + ราคา
+	later := depart.Add(30 * time.Minute)
+	path := fmt.Sprintf("/api/staff/trips/%d", tr.ID)
+	if code := call(t, srv, "PUT", path, staff, map[string]any{"departAt": later, "priceBaht": 100}, &tr); code != 200 || tr.PriceBaht != 100 || !tr.DepartAt.Equal(later) {
+		t.Errorf("แก้รอบต้องได้ 200 ได้ %d %+v", code, tr)
+	}
+	var e struct{ Error struct{ Code string } }
+	if code := call(t, srv, "PUT", "/api/staff/trips/7", staff, map[string]any{"departAt": later, "priceBaht": 100}, &e); code != 409 || e.Error.Code != "TRIP_CLOSED" {
+		t.Errorf("แก้รอบที่ออกไปแล้วต้องได้ 409 TRIP_CLOSED ได้ %d %s", code, e.Error.Code)
+	}
+	if code := call(t, srv, "PUT", "/api/staff/trips/999999", staff, map[string]any{"departAt": later, "priceBaht": 100}, nil); code != 404 {
+		t.Errorf("แก้รอบที่ไม่มีต้องได้ 404 ได้ %d", code)
+	}
+
+	// มีคนจองแล้ว ยกเลิกทั้งรอบ → การจองถูกยกเลิกไปด้วย ที่นั่งว่างหมด
+	ton, _ := tickets.Issue(4, "member")
+	var b store.Booking
+	call(t, srv, "POST", "/api/bookings", ton, map[string]any{"tripId": tr.ID, "seats": []int{1, 2}}, &b)
+	if code := call(t, srv, "POST", path+"/cancel", staff, nil, &tr); code != 200 || tr.Status != "cancelled" || tr.SeatsLeft != 40 {
+		t.Errorf("ยกเลิกรอบต้องได้ 200 cancelled ที่นั่งว่าง 40 ได้ %d %+v", code, tr)
+	}
+	call(t, srv, "GET", fmt.Sprintf("/api/bookings/%d", b.ID), ton, nil, &b)
+	if b.Status != "cancelled" || b.CancelledAt == nil {
+		t.Errorf("การจองในรอบที่ยกเลิกต้องถูกยกเลิกไปด้วย ได้ %+v", b)
+	}
+	if code := call(t, srv, "POST", path+"/cancel", staff, nil, &e); code != 409 || e.Error.Code != "TRIP_CLOSED" {
+		t.Errorf("ยกเลิกรอบซ้ำต้องได้ 409 TRIP_CLOSED ได้ %d %s", code, e.Error.Code)
+	}
+}
+
+func tripIDs(trips []store.Trip) []int64 {
+	ids := make([]int64, len(trips))
+	for i, t := range trips {
+		ids[i] = t.ID
+	}
+	return ids
+}
+
+func TestTripPassengersAndVehicles(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	staff, _ := tickets.Issue(2, "staff")
+
+	// รอบ 1: นิดา 1,2 และ ต้น 5 เรียงตามที่นั่งแรก
+	var res struct {
+		Trip  store.Trip
+		Items []store.Passenger
+	}
+	if code := call(t, srv, "GET", "/api/staff/trips/1/passengers", staff, nil, &res); code != 200 || res.Trip.ID != 1 || len(res.Items) != 2 {
+		t.Fatalf("รอบ 1 ต้องมีผู้โดยสาร 2 การจอง ได้ %d %+v", code, res)
+	}
+	p := res.Items[0]
+	if p.Member.DisplayName != "นิดา" || p.Member.Phone == nil || fmt.Sprint(p.Seats) != "[1 2]" || fmt.Sprint(res.Items[1].Seats) != "[5]" {
+		t.Errorf("รายชื่อไม่ตรง seed: %+v", res.Items)
+	}
+	// รอบ 5 มีแต่การจองที่ยกเลิกแล้ว ต้องได้รายชื่อว่าง
+	call(t, srv, "GET", "/api/staff/trips/5/passengers", staff, nil, &res)
+	if len(res.Items) != 0 {
+		t.Errorf("รอบ 5 ต้องไม่มีผู้โดยสาร ได้ %+v", res.Items)
+	}
+	if code := call(t, srv, "GET", "/api/staff/trips/999999/passengers", staff, nil, nil); code != 404 {
+		t.Errorf("รอบที่ไม่มีต้องได้ 404 ได้ %d", code)
+	}
+
+	var vs struct{ Items []store.Vehicle }
+	if code := call(t, srv, "GET", "/api/staff/vehicles", staff, nil, &vs); code != 200 || len(vs.Items) != 3 || vs.Items[2].Kind != "bus" {
+		t.Errorf("ต้องได้รถ 3 คัน ได้ %d %+v", code, vs.Items)
+	}
+}
