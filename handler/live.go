@@ -10,7 +10,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"petfinder/store"
+	"jongkookhub/store"
 )
 
 // pingEvery ส่ง ping เป็นระยะ กัน proxy ระหว่างทาง (เช่นของ Render) ตัดการเชื่อมต่อที่เงียบนานเกินไป

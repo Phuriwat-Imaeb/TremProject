@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"petfinder/mw"
-	"petfinder/store"
+	"jongkookhub/mw"
+	"jongkookhub/store"
 )
 
 // แม่แบบ CRUD: ทำตารางใหม่ให้คัดลอกไฟล์นี้กับ store/articles.go แล้วเปลี่ยนชื่อ/ฟิลด์

@@ -16,10 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"petfinder/auth"
-	"petfinder/handler"
-	"petfinder/live"
-	"petfinder/store"
+	"jongkookhub/auth"
+	"jongkookhub/handler"
+	"jongkookhub/live"
+	"jongkookhub/store"
 )
 
 // เทสต์ทั้งเส้นทาง: mux → middleware → handler → ฐานข้อมูลจริง

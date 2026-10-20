@@ -19,7 +19,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: secret
-          POSTGRES_DB: petfinder
+          POSTGRES_DB: jongkookhub
         ports:
           - 5432:5432
         # รอให้ฐานข้อมูลพร้อมก่อนค่อยเริ่มขั้นตอนต่อไป
@@ -30,7 +30,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgres://postgres:secret@127.0.0.1:5432/petfinder
+      DATABASE_URL: postgres://postgres:secret@127.0.0.1:5432/jongkookhub
 
     steps:
       - uses: actions/checkout@v4

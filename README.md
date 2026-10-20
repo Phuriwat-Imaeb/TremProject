@@ -1,4 +1,4 @@
-# TremProject
+# Jong(kook)hub — ระบบจองที่นั่งรถตู้ / รถทัวร์ (TremProject)
 
 API หลังบ้าน (Go + PostgreSQL) และหน้าเว็บ React ([web/](web)) วิชา 520342 Server Side Web Programming
 สัญญา API ทั้งหมดอยู่ใน [openapi.yaml](openapi.yaml)
@@ -8,7 +8,7 @@ API หลังบ้าน (Go + PostgreSQL) และหน้าเว็บ
 ```bash
 # 1) เปิดฐานข้อมูล แล้วสร้างตาราง + ข้อมูลตัวอย่าง
 docker compose up -d
-export DATABASE_URL="postgres://postgres:secret@127.0.0.1:5432/petfinder"
+export DATABASE_URL="postgres://postgres:secret@127.0.0.1:5432/jongkookhub"
 psql "$DATABASE_URL" -f db/schema.sql
 psql "$DATABASE_URL" -f db/seed.sql
 

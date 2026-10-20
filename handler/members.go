@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"slices"
 
-	"petfinder/mw"
-	"petfinder/store"
+	"jongkookhub/mw"
+	"jongkookhub/store"
 )
 
 // บทบาทที่ตั้งได้ ต้องตรงกับ CHECK ของตาราง members ใน schema.sql

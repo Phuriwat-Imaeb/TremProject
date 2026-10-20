@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
-	"petfinder/auth"
-	"petfinder/handler"
-	"petfinder/mw"
+	"jongkookhub/auth"
+	"jongkookhub/handler"
+	"jongkookhub/mw"
 )
 
 // routes รวมทุกเส้นทางไว้ที่เดียว แยกจาก main เพื่อให้ main_test.go ยิงคำขอผ่าน mux จริงได้

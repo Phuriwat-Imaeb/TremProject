@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"petfinder/auth"
+	"jongkookhub/auth"
 )
 
 var iss = &auth.Issuer{Secret: []byte("test-secret-ที่ยาวพอสำหรับการทดสอบเท่านั้น-1234"), TTL: time.Hour}

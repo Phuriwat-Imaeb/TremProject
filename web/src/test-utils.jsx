@@ -21,14 +21,14 @@ export function renderWithProviders(ui, { route = '/' } = {}) {
 // จำลองว่า login ไว้แล้ว: AuthProvider อ่าน token + member จาก localStorage ตอนเริ่ม
 // getMe ไม่ตอบเลย เพราะ member มีอยู่แล้ว และไม่ให้มา setState ตอนเทสต์ทำอย่างอื่นอยู่ (warning act)
 export function loginAs(member, token = 'tok') {
-  localStorage.setItem('petfinder.token', token);
-  localStorage.setItem('petfinder.member', JSON.stringify(member));
+  localStorage.setItem('jongkookhub.token', token);
+  localStorage.setItem('jongkookhub.member', JSON.stringify(member));
   api.getMe.mockReturnValue(new Promise(() => {}));
 }
 
-export const admin = { id: 1, email: 'admin@petfinder.test', displayName: 'แอดมิน', phone: null, role: 'admin' };
+export const admin = { id: 1, email: 'admin@tremproject.test', displayName: 'แอดมิน', phone: null, role: 'admin' };
 export const staff = { id: 2, email: 'staff@tremproject.test', displayName: 'พนักงานขายตั๋ว', phone: '0812345678', role: 'staff' };
-export const nida ={ id: 3, email: 'nida@example.com', displayName: 'นิดา', phone: '0898765432', role: 'member' };
+export const nida = { id: 3, email: 'nida@example.com', displayName: 'นิดา', phone: '0898765432', role: 'member' };
 
 // บทความปลอมหน้าตาเหมือนที่ server ตอบ
 export const article = (id, title, published = true) => ({

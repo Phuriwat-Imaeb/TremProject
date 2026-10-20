@@ -51,7 +51,7 @@ test('สมัครสำเร็จ ส่งข้อมูลโดยไ�
     displayName: 'นิดา',
     phone: '',
   });
-  expect(localStorage.getItem('petfinder.token')).toBe('tok');
+  expect(localStorage.getItem('jongkookhub.token')).toBe('tok');
 });
 
 test('อีเมลซ้ำ โชว์ข้อความจาก server และกดสมัครใหม่ได้', async () => {

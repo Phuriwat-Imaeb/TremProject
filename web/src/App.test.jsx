@@ -16,7 +16,7 @@ beforeEach(() => {
 test('URL ที่ไม่มีอยู่ ต้องเจอหน้า 404 และตั้งชื่อแท็บ', () => {
   renderApp('/no-such-page');
   expect(screen.getByRole('heading', { name: 'ไม่พบหน้านี้' })).toBeInTheDocument();
-  expect(document.title).toBe('ไม่พบหน้านี้ · PetFinder');
+  expect(document.title).toBe('ไม่พบหน้านี้ · Jong(kook)hub');
   expect(screen.getByRole('link', { name: 'กลับหน้าแรก' })).toHaveAttribute('href', '/');
 });
 
@@ -31,7 +31,7 @@ test('ตั๋วหมดอายุระหว่างใช้งาน �
 
   expect(await screen.findByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
   expect(screen.getByRole('status')).toHaveTextContent('หมดเวลาเข้าสู่ระบบ');
-  expect(localStorage.getItem('petfinder.token')).toBeNull();
+  expect(localStorage.getItem('jongkookhub.token')).toBeNull();
 
   api.login.mockResolvedValue({ token: 'new', member: nida });
   await userEvent.type(screen.getByLabelText('อีเมล'), 'nida@example.com');

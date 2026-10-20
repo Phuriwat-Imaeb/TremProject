@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"petfinder/store"
+	"jongkookhub/store"
 )
 
 // หลังบ้าน admin: เส้นทางและคันรถ (ใช้ call / dbExec จาก main_test.go)

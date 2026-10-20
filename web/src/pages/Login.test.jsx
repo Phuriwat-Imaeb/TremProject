@@ -42,7 +42,7 @@ test('ยังไม่ login เข้า /me ต้องเด้งไป�
 
   expect(await screen.findByText('หน้าบัญชี')).toBeInTheDocument();
   expect(api.login).toHaveBeenCalledWith('nida@example.com', 'password123');
-  expect(localStorage.getItem('petfinder.token')).toBe('tok');
+  expect(localStorage.getItem('jongkookhub.token')).toBe('tok');
 });
 
 test('รหัสผิดต้องโชว์ข้อความจาก server และปุ่มกดได้อีก', async () => {

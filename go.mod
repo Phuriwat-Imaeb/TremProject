@@ -1,4 +1,4 @@
-module petfinder
+module jongkookhub
 
 go 1.27.1
 

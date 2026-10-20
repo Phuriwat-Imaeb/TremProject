@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"petfinder/mw"
-	"petfinder/store"
+	"jongkookhub/mw"
+	"jongkookhub/store"
 )
 
 // maxSeatsPerBooking จองได้ครั้งละไม่เกินนี้ (NewBooking.seats maxItems ใน openapi.yaml)

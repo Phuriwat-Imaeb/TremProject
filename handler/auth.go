@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"petfinder/auth"
-	"petfinder/mw"
-	"petfinder/store"
+	"jongkookhub/auth"
+	"jongkookhub/mw"
+	"jongkookhub/store"
 )
 
 type registerReq struct {

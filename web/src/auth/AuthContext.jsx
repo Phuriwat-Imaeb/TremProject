@@ -4,8 +4,8 @@ import * as api from '../api/backend';
 // เก็บสถานะ login ไว้กลางแอป Navbar และทุกหน้าที่ต้อง login จะเห็นค่าเดียวกัน
 const AuthContext = createContext(null);
 
-const TOKEN_KEY = 'petfinder.token';
-const MEMBER_KEY = 'petfinder.member';
+const TOKEN_KEY = 'jongkookhub.token';
+const MEMBER_KEY = 'jongkookhub.member';
 
 export function AuthProvider({ children }) {
   // อ่านค่าจาก localStorage ตอนเริ่ม refresh หน้าแล้วจะยัง login อยู่

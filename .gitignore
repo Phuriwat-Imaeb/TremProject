@@ -6,5 +6,8 @@
 /course-materials/
 
 # ไฟล์ที่ build ได้
-/petfinder
+/jongkookhub
 /app
+
+# connection string ของ Neon (production) ไว้รัน schema/seed จากเครื่องนี้ ห้าม commit
+.neon_url

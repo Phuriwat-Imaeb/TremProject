@@ -12,8 +12,8 @@ import (
 
 	"github.com/coder/websocket"
 
-	"petfinder/mw"
-	"petfinder/store"
+	"jongkookhub/mw"
+	"jongkookhub/store"
 )
 
 // เทสต์ WebSocket ต้องมีเซิร์ฟเวอร์จริง (httptest.NewServer) เพราะต้องเปลี่ยนการเชื่อมต่อเป็น WebSocket
