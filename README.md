@@ -84,6 +84,9 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `GET /api/routes` เส้นทางรถทั้งหมด
 - รอบรถ: `GET /api/trips?routeId=&date=YYYY-MM-DD` (เฉพาะรอบที่ยังจองได้ วันที่ตามเวลาไทย), `GET /api/trips/{id}`,
   `GET /api/trips/{id}/seats` ผังที่นั่ง `{ kind, seatCount, taken }`
+- ผังที่นั่งแบบสด: `GET /api/trips/{id}/live` (WebSocket) ส่งผังใหม่ `{ type: "seats", ... }` ทุกครั้งที่มีคนจอง/ยกเลิก
+  และ `{ type: "closed" }` เมื่อรอบถูกยกเลิก ([handler/live.go](handler/live.go), hub อยู่ใน [live/hub.go](live/hub.go))
+  Origin ของหน้าเว็บต้องอยู่ใน `ALLOWED_ORIGINS` ไม่งั้นได้ 403
 - การจอง (ต้องเข้าสู่ระบบ): `POST /api/bookings` `{ tripId, seats }` ทำใน transaction ที่นั่งไม่ว่างตอบ 409 `SEAT_TAKEN`,
   `GET /api/bookings/{id}` (ของตัวเอง หรือ staff/admin ดูได้ทุกรายการ),
   `POST /api/bookings/{id}/cancel` ยกเลิกของตัวเองได้จนถึงเวลารถออก ที่นั่งกลับมาว่างทันที,
@@ -105,6 +108,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
 - `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
 - `/trips` ค้นหารอบรถตามเส้นทาง/วัน (ตัวกรองอยู่ใน URL), `/trips/:id` รายละเอียดรอบ + ผังที่นั่ง เลือกที่นั่งแล้วกดจองได้
+  ผังอัปเดตสดผ่าน WebSocket ถ้าที่นั่งที่เลือกไว้ถูกคนอื่นจองไปจะตัดออกและเตือน หลุดแล้วต่อใหม่เอง
 - `/bookings` การจองของฉัน (แบ่งหน้า), `/bookings/:id` หน้าตั๋ว + ปุ่มยกเลิกการจอง (ต้องเข้าสู่ระบบ)
 - `/articles`, `/articles/:id` อ่านบทความ
 - `/articles` ค้นหาและเลื่อนหน้าได้ คำค้นกับเลขหน้าอยู่ใน URL (`?q=&page=`) กด back ได้ แชร์ลิงก์ได้

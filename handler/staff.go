@@ -126,6 +126,7 @@ func (h *Handler) CancelTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, t)
+	h.notifyClosed(id) // คนที่เปิดผังรอบนี้อยู่ต้องรู้ว่าจองไม่ได้แล้ว ไม่ใช่เห็นแค่ว่าที่นั่งว่างหมด
 }
 
 // TripPassengers  GET /api/staff/trips/{id}/passengers  รอบรถ + รายชื่อผู้โดยสาร

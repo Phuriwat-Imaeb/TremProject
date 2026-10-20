@@ -9,13 +9,17 @@ import (
 	"unicode/utf8"
 
 	"petfinder/auth"
+	"petfinder/live"
 	"petfinder/store"
 )
 
-// Handler คือห้องรับใบสั่ง ถือห้องเก็บของ และเครื่องออกตั๋วไว้ใช้
+// Handler คือห้องรับใบสั่ง ถือห้องเก็บของ เครื่องออกตั๋ว และ hub ข่าวสดไว้ใช้
 type Handler struct {
 	Store   *store.Store
 	Tickets *auth.Issuer
+	Live    *live.Hub
+	// WSOrigins host ของหน้าเว็บที่ต่อ WebSocket ได้ เช่น "localhost:3000" (มาจาก ALLOWED_ORIGINS)
+	WSOrigins []string
 }
 
 // writeJSON ตอบกลับเป็น JSON พร้อมเลขสถานะ

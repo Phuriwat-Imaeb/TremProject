@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
@@ -9,6 +9,7 @@ import SeatMap from '../components/SeatMap';
 import { useToast } from '../components/Toast';
 import { baht, thaiDay, thaiTime, VEHICLE_LABEL } from '../format';
 import useApi from '../hooks/useApi';
+import useLiveSeats from '../hooks/useLiveSeats';
 import usePageTitle from '../hooks/usePageTitle';
 
 // จองได้ครั้งละไม่เกิน 10 ที่ ตรงกับที่ server ตรวจ (NewBooking.seats maxItems ใน openapi.yaml)
@@ -27,6 +28,25 @@ function TripDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState(null);
   usePageTitle(trip.data ? `${trip.data.route.origin} → ${trip.data.route.destination}` : 'รอบรถ');
+
+  // ผังที่นั่งแบบสด: มีคนจอง/ยกเลิกรอบนี้เมื่อไร server ส่งผังใหม่มาทาง WebSocket แล้วเราวาดใหม่ทันที
+  const selectedRef = useRef(selected); // handler ข้างล่างถูกเรียกนอกจังหวะ render ต้องอ่านค่าล่าสุดผ่าน ref
+  selectedRef.current = selected;
+  const bookingRef = useRef(false); // ระหว่างที่เราจองเอง ที่นั่งของเราจะโผล่ในผังใหม่ด้วย ไม่ต้องเตือนว่าโดนแย่ง
+  const live = useLiveSeats(id, (msg) => {
+    if (msg.type === 'closed') {
+      trip.reload(); // รอบถูกยกเลิก โหลดสถานะใหม่ หน้าจะซ่อนผังและขึ้นคำเตือนเอง
+      return;
+    }
+    if (msg.type !== 'seats') return;
+    const { type, ...map } = msg;
+    seats.setData(map);
+    const lost = selectedRef.current.filter((no) => map.taken.includes(no));
+    if (lost.length > 0) {
+      setSelected((s) => s.filter((no) => !map.taken.includes(no)));
+      if (!bookingRef.current) toast.error(`ที่นั่ง ${lost.join(', ')} เพิ่งถูกคนอื่นจองไป เลือกที่อื่นแทนได้`);
+    }
+  });
 
   const back = (
     <Link to="/trips" className="text-sm text-teal-700 hover:underline">
@@ -51,6 +71,7 @@ function TripDetail() {
   const closed = t.status === 'cancelled' || t.departed;
   // ที่เลือกไว้ แต่ผังล่าสุดบอกว่าไม่ว่างแล้ว (เช่น โหลดใหม่หลังมีคนจองตัดหน้า) ไม่นับ
   const picked = selected.filter((no) => !seats.data.taken.includes(no));
+  const seatsLeft = seats.data.seatCount - seats.data.taken.length; // นับจากผังล่าสุด (อัปเดตสด) ไม่ใช่จากตอนโหลดหน้า
 
   function toggle(no) {
     setBookError(null);
@@ -61,11 +82,13 @@ function TripDetail() {
   async function book() {
     setSubmitting(true);
     setBookError(null);
+    bookingRef.current = true;
     try {
       const b = await api.createBooking({ tripId: t.id, seats: picked }, token);
       toast.success(`จองสำเร็จ ที่นั่ง ${b.seats.join(', ')}`);
       navigate(`/bookings/${b.id}`);
     } catch (err) {
+      bookingRef.current = false;
       setBookError(err.message);
       if (err.code === 'SEAT_TAKEN') seats.reload(); // มีคนตัดหน้า โหลดผังใหม่ให้เห็นว่าที่ไหนไม่ว่างแล้ว
       if (err.code === 'TRIP_CLOSED') trip.reload(); // รอบถูกยกเลิกหรือรถออกระหว่างเลือก
@@ -84,7 +107,7 @@ function TripDetail() {
           {thaiDay(t.departAt)} · ออก {thaiTime(t.departAt)} ถึงประมาณ {thaiTime(t.arriveAt)}
         </p>
         <p className="text-sm text-gray-500">
-          {VEHICLE_LABEL[t.vehicle.kind]} ทะเบียน {t.vehicle.plate} · ที่นั่งละ {baht(t.priceBaht)} · ว่าง {t.seatsLeft} จาก{' '}
+          {VEHICLE_LABEL[t.vehicle.kind]} ทะเบียน {t.vehicle.plate} · ที่นั่งละ {baht(t.priceBaht)} · ว่าง {seatsLeft} จาก{' '}
           {t.vehicle.seatCount} ที่
         </p>
       </section>
@@ -94,7 +117,14 @@ function TripDetail() {
 
       {!closed && (
         <section className="rounded-md border border-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-semibold">เลือกที่นั่ง</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">เลือกที่นั่ง</h2>
+            {live && (
+              <span className="flex items-center gap-1 text-xs text-teal-700">
+                <span aria-hidden="true" className="h-2 w-2 rounded-full bg-teal-500" /> อัปเดตสด
+              </span>
+            )}
+          </div>
           <SeatMap
             kind={seats.data.kind}
             seatCount={seats.data.seatCount}

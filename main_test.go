@@ -18,6 +18,7 @@ import (
 
 	"petfinder/auth"
 	"petfinder/handler"
+	"petfinder/live"
 	"petfinder/store"
 )
 
@@ -35,7 +36,7 @@ func newTestServer(t *testing.T) (http.Handler, *auth.Issuer) {
 	}
 	t.Cleanup(pool.Close)
 	tickets := &auth.Issuer{Secret: []byte("test-secret-ยาวพอสำหรับเทสต์-0123456789"), TTL: time.Hour}
-	h := &handler.Handler{Store: &store.Store{Pool: pool}, Tickets: tickets}
+	h := &handler.Handler{Store: &store.Store{Pool: pool}, Tickets: tickets, Live: live.NewHub()}
 	return routes(h, tickets), tickets
 }
 

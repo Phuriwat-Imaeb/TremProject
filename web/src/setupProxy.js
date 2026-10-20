@@ -9,6 +9,7 @@ module.exports = function (app) {
     createProxyMiddleware({
       target: process.env.API_PROXY_TARGET || 'http://localhost:8080',
       changeOrigin: true,
+      ws: true, // ส่งต่อ WebSocket ผังที่นั่งสด (/api/trips/:id/live) ด้วย
     })
   );
 };

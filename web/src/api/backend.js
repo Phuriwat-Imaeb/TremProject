@@ -103,6 +103,12 @@ export function getTrip(id) {
 export function getTripSeats(id) {
   return apiFetch(`/api/trips/${id}/seats`);
 }
+// ที่อยู่ WebSocket ผังที่นั่งแบบสด: http → ws, https → wss
+// BASE ว่าง (dev) = ต่อ origin เดียวกับหน้าเว็บ แล้ว setupProxy ส่งต่อให้ Go (ตั้ง ws: true ไว้แล้ว)
+export function liveSeatsURL(id) {
+  const base = BASE || window.location.origin;
+  return `${base.replace(/^http/, 'ws')}/api/trips/${id}/live`;
+}
 
 // ---------- การจอง (ต้องเข้าสู่ระบบ) ----------
 // ที่นั่งไม่ว่าง → error.code = 'SEAT_TAKEN', รอบปิดแล้ว → 'TRIP_CLOSED'

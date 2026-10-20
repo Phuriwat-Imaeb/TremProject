@@ -61,6 +61,7 @@ func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err == nil:
 		writeJSON(w, http.StatusCreated, b)
+		h.notifySeats(b.Trip.ID) // คนอื่นที่เปิดผังรอบนี้อยู่เห็นที่นั่งเหล่านี้ไม่ว่างทันที
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 	case errors.Is(err, store.ErrTripClosed):
@@ -122,6 +123,7 @@ func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err == nil:
 		writeJSON(w, http.StatusOK, b)
+		h.notifySeats(b.Trip.ID) // ที่นั่งกลับมาว่าง คนที่เปิดผังอยู่เห็นทันที
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "ไม่พบรายการนี้")
 	case errors.Is(err, store.ErrWrongStatus):

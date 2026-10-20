@@ -24,6 +24,7 @@ func routes(h *handler.Handler, tickets *auth.Issuer) *http.ServeMux {
 	mux.HandleFunc("GET /api/trips", h.ListTrips)
 	mux.HandleFunc("GET /api/trips/{id}", h.GetTrip)
 	mux.HandleFunc("GET /api/trips/{id}/seats", h.TripSeats)
+	mux.HandleFunc("GET /api/trips/{id}/live", h.TripLive) // WebSocket
 	mux.HandleFunc("POST /api/bookings", login(h.CreateBooking))
 	mux.HandleFunc("GET /api/bookings/{id}", login(h.GetBooking))
 	mux.HandleFunc("POST /api/bookings/{id}/cancel", login(h.CancelBooking))
