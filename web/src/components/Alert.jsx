@@ -8,7 +8,7 @@ const styles = {
 // error ใช้ role="alert" โปรแกรมอ่านหน้าจออ่านให้ทันที อย่างอื่นใช้ role="status" รอจังหวะว่างค่อยอ่าน
 function Alert({ type = 'error', children }) {
   return (
-    <p role={type === 'error' ? 'alert' : 'status'} className={`rounded-md px-3 py-2 text-sm ${styles[type]}`}>
+    <p role={type === 'error' ? 'alert' : 'status'} className={`rounded-xl px-4 py-3 text-sm ${styles[type]}`}>
       {children}
     </p>
   );

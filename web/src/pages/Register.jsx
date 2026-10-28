@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Alert from '../components/Alert';
+import AuthCard from '../components/AuthCard';
 import Button from '../components/Button';
 import Field from '../components/Field';
 import usePageTitle from '../hooks/usePageTitle';
@@ -55,8 +56,7 @@ function Register() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-bold">สมัครสมาชิก</h1>
+    <AuthCard title="สมัครสมาชิก" tagline="สมัครครั้งเดียว จองได้ทุกเส้นทาง เลือกที่นั่งเองจากผังรถจริง">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="อีเมล" name="email" type="email" autoComplete="email" required value={form.email} onChange={update} />
         <Field
@@ -106,7 +106,7 @@ function Register() {
           เข้าสู่ระบบ
         </Link>
       </p>
-    </div>
+    </AuthCard>
   );
 }
 export default Register;

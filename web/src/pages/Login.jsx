@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Alert from '../components/Alert';
+import AuthCard from '../components/AuthCard';
 import Button from '../components/Button';
 import Field from '../components/Field';
 import usePageTitle from '../hooks/usePageTitle';
@@ -34,8 +35,7 @@ function Login() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-bold">เข้าสู่ระบบ</h1>
+    <AuthCard title="เข้าสู่ระบบ" tagline="ดูตั๋วที่จองไว้ และจองที่นั่งรอบถัดไปได้ในไม่กี่คลิก">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* ถูกพาออกจากระบบเพราะตั๋วหมดอายุ บอกเหตุผล (ถ้ามี error ใหม่ โชว์ error แทน) */}
         {notice && !error && <Alert type="info">{notice}</Alert>}
@@ -66,7 +66,7 @@ function Login() {
           สมัครสมาชิก
         </Link>
       </p>
-    </div>
+    </AuthCard>
   );
 }
 export default Login;

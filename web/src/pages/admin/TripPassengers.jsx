@@ -36,7 +36,7 @@ function TripPassengers() {
   return (
     <div className="space-y-4">
       {back}
-      <div>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">รายชื่อผู้โดยสาร</h1>
         <p className="text-gray-700">
           {thaiDay(t.departAt)} {thaiTime(t.departAt)} · {t.route.origin} → {t.route.destination}
@@ -50,7 +50,7 @@ function TripPassengers() {
         <EmptyState message="ยังไม่มีผู้โดยสาร" />
       ) : (
         // ตารางกว้างกว่าจอมือถือได้ ให้เลื่อนในกรอบตาราง หน้าเว็บทั้งหน้าไม่เลื่อนแนวนอน
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>

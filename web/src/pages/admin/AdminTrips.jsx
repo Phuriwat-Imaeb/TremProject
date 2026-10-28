@@ -78,7 +78,7 @@ function AdminTrips() {
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && <EmptyState message="ไม่มีรอบรถที่ตรงกับที่เลือก">{newButton}</EmptyState>}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white shadow-sm">
           {data.items.map((t) => {
             const state = tripState(t);
             const sold = t.vehicle.seatCount - t.seatsLeft;

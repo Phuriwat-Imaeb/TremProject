@@ -41,7 +41,7 @@ function AdminMembers() {
   return (
     <div>
       <PageHeader title="จัดการสมาชิก" />
-      <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+      <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white shadow-sm">
         {data.items.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div className="min-w-0">

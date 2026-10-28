@@ -6,7 +6,7 @@ import BookingStatus from '../components/BookingStatus';
 import { ButtonLink } from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import Loading from '../components/Loading';
-import PageHeader from '../components/PageHeader';
+import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import { baht, thaiDay, thaiTime } from '../format';
 import useApi from '../hooks/useApi';
@@ -22,15 +22,21 @@ function MyBookings() {
 
   return (
     <div>
-      <PageHeader title="การจองของฉัน">
-        <ButtonLink to="/trips">จองตั๋วเพิ่ม</ButtonLink>
-      </PageHeader>
+      <PageHero
+        title="การจองของฉัน"
+        subtitle="ตั๋วทั้งหมดของคุณ ใหม่สุดอยู่บนสุด"
+        actions={
+          <ButtonLink to="/trips" variant="secondary" className="border-transparent text-teal-900">
+            จองตั๋วเพิ่ม
+          </ButtonLink>
+        }
+      />
       {loading && !data && <Loading />}
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && <EmptyState message="ยังไม่มีการจอง" />}
       <ul className="space-y-3">
         {data?.items.map((b) => (
-          <li key={b.id} className="rounded-md border border-gray-200 bg-white p-4">
+          <li key={b.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
             <Link to={`/bookings/${b.id}`} className="flex flex-wrap items-start justify-between gap-3 hover:opacity-90">
               <div>
                 <p className="font-semibold text-teal-700">

@@ -99,7 +99,7 @@ function TripDetail() {
   return (
     <div className="space-y-6">
       {back}
-      <section className="rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-700 p-6 text-white shadow-md">
+      <section className="rounded-3xl bg-teal-950 p-6 text-white shadow-xl sm:p-8">
         <h1 className="text-2xl font-bold sm:text-3xl">
           {t.route.origin} → {t.route.destination}
         </h1>

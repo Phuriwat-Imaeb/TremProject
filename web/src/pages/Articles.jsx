@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import Alert from '../components/Alert';
 import EmptyState from '../components/EmptyState';
 import Loading from '../components/Loading';
-import PageHeader from '../components/PageHeader';
+import PageHero from '../components/PageHero';
 import Pagination from '../components/Pagination';
 import SearchBox from '../components/SearchBox';
 import useApi from '../hooks/useApi';
@@ -22,9 +22,10 @@ function Articles() {
 
   return (
     <div>
-      <PageHeader title="บทความ" />
-      {/* key: กด back จน q ใน URL เปลี่ยน ช่องค้นหาต้องเปลี่ยนตาม */}
-      <SearchBox key={q} value={q} onSearch={setQ} placeholder="ค้นหาบทความ…" />
+      <PageHero title="บทความ" subtitle="เกร็ดการเดินทาง ข่าวสาร และประกาศจากเรา">
+        {/* key: กด back จน q ใน URL เปลี่ยน ช่องค้นหาต้องเปลี่ยนตาม */}
+        <SearchBox key={q} value={q} onSearch={setQ} placeholder="ค้นหาบทความ…" />
+      </PageHero>
       {loading && !data && <Loading />}
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && (
@@ -32,7 +33,7 @@ function Articles() {
       )}
       <ul className="space-y-3">
         {data?.items.map((a) => (
-          <li key={a.id} className="rounded-md border border-gray-200 bg-white p-4">
+          <li key={a.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
             <Link to={`/articles/${a.id}`} className="text-lg font-semibold text-teal-700 hover:underline">
               {a.title}
             </Link>

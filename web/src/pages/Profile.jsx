@@ -5,6 +5,7 @@ import Alert from '../components/Alert';
 import Button from '../components/Button';
 import Field from '../components/Field';
 import Loading from '../components/Loading';
+import PageHero from '../components/PageHero';
 import { ROLE_LABEL } from '../config';
 import usePageTitle from '../hooks/usePageTitle';
 
@@ -14,24 +15,27 @@ function Profile() {
   const { member } = useAuth();
   if (!member) return <Loading />;
   return (
-    <div className="mx-auto max-w-sm space-y-8">
-      <section>
-        <h1 className="mb-6 text-2xl font-bold">บัญชีของฉัน</h1>
-        <dl className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
-          <Row label="ชื่อที่แสดง" value={member.displayName} />
-          <Row label="อีเมล" value={member.email} />
-          <Row label="เบอร์โทร" value={member.phone || '-'} />
-          <Row label="บทบาท" value={ROLE_LABEL[member.role] ?? member.role} />
-        </dl>
-      </section>
-      <ChangePasswordForm />
+    <div>
+      <PageHero title="บัญชีของฉัน" eyebrow={ROLE_LABEL[member.role] ?? member.role} subtitle={member.email} />
+      <div className="grid items-start gap-6 md:grid-cols-2">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-2 text-lg font-semibold">ข้อมูลบัญชี</h2>
+          <dl className="divide-y divide-gray-100">
+            <Row label="ชื่อที่แสดง" value={member.displayName} />
+            <Row label="อีเมล" value={member.email} />
+            <Row label="เบอร์โทร" value={member.phone || '-'} />
+            <Row label="บทบาท" value={ROLE_LABEL[member.role] ?? member.role} />
+          </dl>
+        </section>
+        <ChangePasswordForm />
+      </div>
     </div>
   );
 }
 
 function Row({ label, value }) {
   return (
-    <div className="flex justify-between gap-4 px-4 py-3 text-sm">
+    <div className="flex justify-between gap-4 py-3 text-sm">
       <dt className="text-gray-500">{label}</dt>
       <dd className="break-all text-right font-medium">{value}</dd>
     </div>
@@ -79,7 +83,7 @@ function ChangePasswordForm() {
   }
 
   return (
-    <section>
+    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold">เปลี่ยนรหัสผ่าน</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field

@@ -3,7 +3,7 @@ import * as api from '../api/backend';
 import Alert from '../components/Alert';
 import EmptyState from '../components/EmptyState';
 import Loading from '../components/Loading';
-import PageHeader from '../components/PageHeader';
+import PageHero from '../components/PageHero';
 import TripFilterForm from '../components/TripFilterForm';
 import { baht, thaiDay, thaiTime, todayInThai, VEHICLE_LABEL } from '../format';
 import useApi from '../hooks/useApi';
@@ -75,16 +75,17 @@ function Trips() {
 
   return (
     <div>
-      <PageHeader title="ค้นหารอบรถ" />
-      {/* key: กด back จน URL เปลี่ยน ฟอร์มต้องเปลี่ยนตาม */}
-      <TripFilterForm
-        key={`${routeId}|${date}`}
-        routes={routes.data?.items ?? []}
-        routeId={routeId}
-        date={date}
-        minDate={todayInThai()}
-        onSearch={search}
-      />
+      <PageHero title="ค้นหารอบรถ" eyebrow="เลือกเส้นทางและวันที่ แล้วเลือกที่นั่งจากผังรถ">
+        {/* key: กด back จน URL เปลี่ยน ฟอร์มต้องเปลี่ยนตาม */}
+        <TripFilterForm
+          key={`${routeId}|${date}`}
+          routes={routes.data?.items ?? []}
+          routeId={routeId}
+          date={date}
+          minDate={todayInThai()}
+          onSearch={search}
+        />
+      </PageHero>
       {routes.error && <Alert>โหลดรายชื่อเส้นทางไม่สำเร็จ: {routes.error.message}</Alert>}
       {loading && !data && <Loading />}
       {error && <Alert>{error.message}</Alert>}

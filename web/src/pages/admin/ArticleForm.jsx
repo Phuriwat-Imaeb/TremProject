@@ -63,7 +63,7 @@ function Editor({ id, initial, token }) {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold">{id ? 'แก้ไขบทความ' : 'เขียนบทความใหม่'}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <Field label="หัวข้อ" required maxLength={200} value={form.title} onChange={set('title')} />
         <Field label="เนื้อหา" as="textarea" rows={10} required value={form.body} onChange={set('body')} />
         <Field

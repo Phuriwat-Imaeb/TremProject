@@ -9,7 +9,7 @@ const variants = {
 };
 
 const base =
-  'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50';
+  'inline-flex items-center justify-center rounded-lg px-4 py-2 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50';
 
 // ปุ่มหน้าตาเดียวกันทั้งเว็บ variant: primary | secondary | danger | ghost | ghostDanger
 // type ตั้งต้นเป็น "button" กันกดแล้วเผลอส่งฟอร์ม ปุ่มส่งฟอร์มต้องใส่ type="submit" เอง

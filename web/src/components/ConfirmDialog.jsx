@@ -20,7 +20,7 @@ function ConfirmDialog({ open, title, message, confirmLabel = 'ยืนยั�
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()} // คลิกในกล่องไม่นับเป็นคลิกพื้นหลัง
       >
         <h2 id="confirm-title" className="text-lg font-semibold">
