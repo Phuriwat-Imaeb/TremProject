@@ -56,13 +56,13 @@ function AdminArticles() {
           <EmptyState message="ยังไม่มีบทความ">{newButton}</EmptyState>
         ))}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white">
           {data.items.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{a.title}</p>
                 <p className="text-xs text-gray-500">
-                  <span className={a.published ? 'text-teal-700' : 'text-amber-700'}>
+                  <span className={a.published ? 'text-brand-700' : 'text-amber-700'}>
                     {a.published ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
                   </span>{' '}
                   · แก้ไขล่าสุด {thaiDate(a.updatedAt)}

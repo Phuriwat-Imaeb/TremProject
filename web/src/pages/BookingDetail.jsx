@@ -6,6 +6,7 @@ import Alert from '../components/Alert';
 import BookingStatus, { canCancel } from '../components/BookingStatus';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Icon from '../components/Icon';
 import Loading from '../components/Loading';
 import { useToast } from '../components/Toast';
 import { baht, thaiDay, thaiTime, VEHICLE_LABEL } from '../format';
@@ -23,7 +24,7 @@ function BookingDetail() {
   usePageTitle(`การจอง #${id}`);
 
   const back = (
-    <Link to="/bookings" className="text-sm text-teal-700 hover:underline">
+    <Link to="/bookings" className="text-sm text-brand-700 hover:underline">
       ← การจองของฉัน
     </Link>
   );
@@ -53,14 +54,19 @@ function BookingDetail() {
 
   const t = b.trip;
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       {back}
-      <article className="rounded-md border border-gray-200 bg-white">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-gray-300 p-4">
-          <h1 className="text-xl font-bold">การจอง #{b.id}</h1>
+      <article className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-dashed border-gray-200 bg-tint-peach p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-500 text-white">
+              <Icon name="ticket" />
+            </span>
+            <h1 className="text-2xl font-bold">การจอง #{b.id}</h1>
+          </div>
           <BookingStatus booking={b} />
         </header>
-        <dl className="grid gap-4 p-4 sm:grid-cols-2">
+        <dl className="grid gap-5 p-6 sm:grid-cols-2">
           <div>
             <dt className="text-sm text-gray-500">เส้นทาง</dt>
             <dd className="text-lg font-semibold">
@@ -103,12 +109,12 @@ function BookingDetail() {
           )}
         </dl>
         {b.status === 'confirmed' && t.status === 'cancelled' && (
-          <div className="px-4 pb-4">
+          <div className="px-6 pb-6">
             <Alert>รอบรถนี้ถูกยกเลิกแล้ว</Alert>
           </div>
         )}
         {canCancel(b) && (
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 p-4">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-gray-50 p-6">
             <p className="text-sm text-gray-600">กรุณามาถึงจุดขึ้นรถก่อนเวลาออกอย่างน้อย 15 นาที</p>
             <Button variant="ghostDanger" onClick={() => setConfirming(true)}>
               ยกเลิกการจอง

@@ -69,28 +69,41 @@ test('ลิงก์หลังบ้านเห็นเฉพาะ staff �
   }
 });
 
-test('admin: เข้า /admin เฉย ๆ พาไปแท็บรอบรถ และสลับไปแท็บสมาชิกได้', async () => {
+// ตัวเลขแดชบอร์ดปลอม หน้าตาเหมือนที่ GET /api/staff/stats ตอบ
+const emptyStats = {
+  today: '2026-10-28',
+  bookingsToday: 2,
+  seatsToday: 3,
+  revenueTodayBaht: 240,
+  upcomingTrips: 5,
+  daily: ['22', '23', '24', '25', '26', '27', '28'].map((d) => ({ date: `2026-10-${d}`, confirmed: 1, cancelled: 0 })),
+  recentBookings: [],
+  nextTrips: [],
+};
+
+test('admin: เข้า /admin เฉย ๆ เจอแดชบอร์ด และสลับไปเมนูสมาชิกได้', async () => {
   loginAs(admin);
-  api.listRoutes.mockResolvedValue({ items: [] });
-  api.staffListTrips.mockResolvedValue(pageOf([]));
+  api.staffStats.mockResolvedValue(emptyStats);
   api.adminListMembers.mockResolvedValue({ items: [admin, nida] });
   renderApp('/admin');
 
-  expect(await screen.findByRole('heading', { name: 'จัดการรอบรถ' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'สวัสดี แอดมิน 👋' })).toBeInTheDocument();
+  expect(screen.getByText('240 บาท')).toBeInTheDocument();
+  expect(api.staffStats).toHaveBeenCalledWith('tok');
   const tabs = screen.getByRole('navigation', { name: 'เมนูหลังบ้าน' });
   await act(async () => userEvent.click(within(tabs).getByRole('link', { name: 'สมาชิก' })));
   expect(await screen.findByRole('heading', { name: 'จัดการสมาชิก' })).toBeInTheDocument();
 });
 
-test('staff: เห็นแค่แท็บรอบรถ และเปิดหน้าบทความหลังบ้านไม่ได้', async () => {
+test('staff: เห็นแค่แดชบอร์ดกับรอบรถ และเปิดหน้าบทความหลังบ้านไม่ได้', async () => {
   loginAs(staff);
   api.listRoutes.mockResolvedValue({ items: [] });
   api.staffListTrips.mockResolvedValue(pageOf([]));
-  const { unmount } = renderApp('/admin');
+  const { unmount } = renderApp('/admin/trips');
 
   expect(await screen.findByRole('heading', { name: 'จัดการรอบรถ' })).toBeInTheDocument();
   const tabs = screen.getByRole('navigation', { name: 'เมนูหลังบ้าน' });
-  expect(within(tabs).getAllByRole('link').map((a) => a.textContent)).toEqual(['รอบรถ']);
+  expect(within(tabs).getAllByRole('link').map((a) => a.textContent)).toEqual(['แดชบอร์ด', 'รอบรถ']);
   unmount();
 
   renderApp('/admin/articles');

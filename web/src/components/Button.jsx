@@ -1,26 +1,33 @@
 import { Link } from 'react-router-dom';
 
+// ปุ่มตาม Design System: Primary (ส้ม), Teal (เขียว), Outline, Ghost, Danger มีสองขนาด md / sm
+// ชื่อ variant "secondary" ใช้กับปุ่มขอบขาว (Outline ในแบบ) เพราะทั้งเว็บเรียกชื่อนี้อยู่แล้ว
 const variants = {
-  primary: 'bg-brand-600 text-white shadow-sm hover:bg-brand-700',
-  secondary: 'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-brand-200 hover:bg-brand-50',
-  light: 'bg-white text-brand-800 shadow-soft hover:bg-brand-50',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
+  primary: 'bg-brand-500 text-white hover:bg-brand-600',
+  teal: 'bg-mint-600 text-white hover:bg-mint-700',
+  secondary: 'border border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50',
+  light: 'bg-white text-gray-900 hover:bg-brand-50',
+  danger: 'bg-[#d64545] text-white hover:bg-red-700',
   ghost: 'text-brand-700 hover:bg-brand-50',
   ghostDanger: 'text-red-700 hover:bg-red-50',
 };
 
-const base =
-  'inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+const sizes = {
+  md: 'min-h-11 rounded-xl px-5 text-sm',
+  sm: 'min-h-8 rounded-lg px-3 text-xs',
+};
 
-// ปุ่มหน้าตาเดียวกันทั้งเว็บ variant: primary | secondary | danger | ghost | ghostDanger
+const base =
+  'inline-flex items-center justify-center gap-2 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
 // type ตั้งต้นเป็น "button" กันกดแล้วเผลอส่งฟอร์ม ปุ่มส่งฟอร์มต้องใส่ type="submit" เอง
-function Button({ variant = 'primary', className = '', type = 'button', ...props }) {
-  return <button type={type} className={`${base} ${variants[variant]} ${className}`} {...props} />;
+function Button({ variant = 'primary', size = 'md', className = '', type = 'button', ...props }) {
+  return <button type={type} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props} />;
 }
 
-// ลิงก์ที่หน้าตาเป็นปุ่ม เช่น "เขียนบทความใหม่" (ไปหน้าอื่น จึงต้องเป็น <a> ไม่ใช่ <button>)
-export function ButtonLink({ variant = 'primary', className = '', ...props }) {
-  return <Link className={`${base} ${variants[variant]} ${className}`} {...props} />;
+// ลิงก์ที่หน้าตาเป็นปุ่ม เช่น "เพิ่มรอบรถ" (ไปหน้าอื่น จึงต้องเป็น <a> ไม่ใช่ <button>)
+export function ButtonLink({ variant = 'primary', size = 'md', className = '', ...props }) {
+  return <Link className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props} />;
 }
 
 export default Button;

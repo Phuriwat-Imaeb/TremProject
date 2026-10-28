@@ -21,7 +21,7 @@ const isOpen = (t) => t.status === 'scheduled' && !t.departed;
 function tripState(t) {
   if (t.status === 'cancelled') return { label: 'ยกเลิกแล้ว', className: 'text-red-700' };
   if (t.departed) return { label: 'ออกไปแล้ว', className: 'text-gray-500' };
-  return { label: 'เปิดขาย', className: 'text-teal-700' };
+  return { label: 'เปิดขาย', className: 'text-brand-700' };
 }
 
 // หลังบ้าน: ทุกรอบรถ รวมที่ยกเลิก/ออกไปแล้ว กรองเส้นทาง/วัน แบ่งหน้า ตัวกรองทั้งหมดอยู่ใน URL
@@ -78,7 +78,7 @@ function AdminTrips() {
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && <EmptyState message="ไม่มีรอบรถที่ตรงกับที่เลือก">{newButton}</EmptyState>}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white">
           {data.items.map((t) => {
             const state = tripState(t);
             const sold = t.vehicle.seatCount - t.seatsLeft;

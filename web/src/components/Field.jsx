@@ -1,29 +1,15 @@
-import { useId } from 'react';
-
-// ช่องกรอกพร้อมป้ายชื่อ ใช้ร่วมกันในทุกฟอร์ม
-// as="textarea" ได้ช่องข้อความหลายบรรทัด (เช่น เนื้อหาบทความ)
-function Field({ label, hint, as: Input = 'input', id: providedId, ...inputProps }) {
-  const generatedId = useId();
-  const id = providedId ?? generatedId;
-  const hintId = `${id}-hint`;
-
+// ช่องกรอกพร้อมป้ายชื่อ ใช้ร่วมกันในทุกฟอร์ม (หน้าตาตาม Input ใน Design System)
+// as="textarea" ได้ช่องข้อความหลายบรรทัด (เช่น เนื้อหาบทความ), as="select" ได้ดรอปดาวน์
+function Field({ label, hint, as: Input = 'input', ...inputProps }) {
   return (
-    <div className="block">
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-slate-700">
-        {label}
-      </label>
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-gray-900">{label}</span>
       <Input
         {...inputProps}
-        id={id}
-        aria-describedby={hint ? hintId : inputProps['aria-describedby']}
-        className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+        className="min-h-11 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 transition placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100"
       />
-      {hint && (
-        <span id={hintId} className="mt-1.5 block text-xs text-slate-500">
-          {hint}
-        </span>
-      )}
-    </div>
+      {hint && <span className="mt-1.5 block text-xs text-gray-500">{hint}</span>}
+    </label>
   );
 }
 export default Field;

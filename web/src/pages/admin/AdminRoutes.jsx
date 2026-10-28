@@ -38,7 +38,7 @@ function RouteForm({ editing, token, onSaved, onCancel }) {
   }
 
   return (
-    <form onSubmit={submit} className="mb-6 space-y-3 rounded-md border border-gray-200 bg-white p-4">
+    <form onSubmit={submit} className="mb-6 space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
       <h2 className="font-semibold">{editing ? `แก้เส้นทาง #${editing.id}` : 'เพิ่มเส้นทาง'}</h2>
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_10rem]">
         <Field label="ต้นทาง" required maxLength={100} value={form.origin} onChange={set('origin')} />
@@ -118,7 +118,7 @@ function AdminRoutes() {
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && <EmptyState message="ยังไม่มีเส้นทาง" />}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white">
           {data.items.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">

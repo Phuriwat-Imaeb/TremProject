@@ -8,9 +8,9 @@ const LAYOUT = {
 };
 
 const seatClass = {
-  free: 'border-teal-600 bg-white text-teal-800 hover:bg-teal-50',
-  selected: 'border-teal-700 bg-teal-600 text-white',
-  taken: 'cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400 line-through',
+  free: 'border-gray-200 bg-white text-gray-700 hover:border-brand-400 hover:text-brand-700',
+  selected: 'border-brand-500 bg-brand-500 text-white',
+  taken: 'cursor-not-allowed border-gray-100 bg-gray-100 text-gray-400 line-through',
 };
 
 // แบ่งเลข 1..seatCount เป็นแถว ๆ ละ perRow ที่
@@ -28,29 +28,38 @@ function SeatMap({ kind, seatCount, taken, selected, onToggle }) {
 
   return (
     <div>
-      <div role="group" aria-label="ผังที่นั่ง" className={`mx-auto grid max-w-xs gap-2 ${cols}`}>
-        {rowsOf(seatCount, perRow).flatMap((row) =>
-          row.flatMap((no, i) => {
-            const state = takenSet.has(no) ? 'taken' : selected.includes(no) ? 'selected' : 'free';
-            const seat = (
-              <button
-                key={no}
-                type="button"
-                disabled={state === 'taken'}
-                aria-pressed={state === 'selected'}
-                aria-label={`ที่นั่ง ${no}${state === 'taken' ? ' ไม่ว่าง' : ''}`}
-                onClick={() => onToggle(no)}
-                className={`h-11 rounded-md border-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 ${seatClass[state]}`}
-              >
-                {no}
-              </button>
-            );
-            // ทางเดินของรถทัวร์ คั่นหลังที่นั่งที่ 2 ของแถว
-            return i + 1 === aisleAfter ? [seat, <span key={`aisle-${no}`} aria-hidden="true" />] : [seat];
-          })
-        )}
+      {/* ตัวรถสีขาว หัวรถ (ที่คนขับ) อยู่ด้านบน */}
+      <div className="mx-auto max-w-xs rounded-t-[2.5rem] rounded-b-3xl bg-white p-5 shadow-sm">
+        <div aria-hidden="true" className="mb-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-3 text-xs text-gray-400">
+          <span>หน้ารถ</span>
+          <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-gray-200">
+            <span className="h-2 w-2 rounded-full bg-gray-300" />
+          </span>
+        </div>
+        <div role="group" aria-label="ผังที่นั่ง" className={`grid gap-2 ${cols}`}>
+          {rowsOf(seatCount, perRow).flatMap((row) =>
+            row.flatMap((no, i) => {
+              const state = takenSet.has(no) ? 'taken' : selected.includes(no) ? 'selected' : 'free';
+              const seat = (
+                <button
+                  key={no}
+                  type="button"
+                  disabled={state === 'taken'}
+                  aria-pressed={state === 'selected'}
+                  aria-label={`ที่นั่ง ${no}${state === 'taken' ? ' ไม่ว่าง' : ''}`}
+                  onClick={() => onToggle(no)}
+                  className={`h-11 rounded-t-xl rounded-b-md border-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ${seatClass[state]}`}
+                >
+                  {no}
+                </button>
+              );
+              // ทางเดินของรถทัวร์ คั่นหลังที่นั่งที่ 2 ของแถว
+              return i + 1 === aisleAfter ? [seat, <span key={`aisle-${no}`} aria-hidden="true" />] : [seat];
+            })
+          )}
+        </div>
       </div>
-      <ul className="mt-4 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+      <ul className="mt-5 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
         <li className="flex items-center gap-2">
           <span aria-hidden="true" className={`h-4 w-4 rounded border-2 ${seatClass.free}`} /> ว่าง
         </li>

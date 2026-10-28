@@ -15,7 +15,7 @@ function ArticleDetail() {
   usePageTitle(article?.title ?? 'บทความ');
 
   const back = (
-    <Link to="/articles" className="text-sm text-teal-700 hover:underline">
+    <Link to="/articles" className="text-sm text-brand-700 hover:underline">
       ← บทความทั้งหมด
     </Link>
   );
@@ -32,15 +32,15 @@ function ArticleDetail() {
   }
 
   return (
-    <article className="space-y-4">
+    <article className="mx-auto max-w-3xl space-y-6">
       {back}
-      {article.coverUrl && <img src={article.coverUrl} alt="" className="w-full rounded-md object-cover" />}
-      <h1 className="text-2xl font-bold">{article.title}</h1>
+      {article.coverUrl && <img src={article.coverUrl} alt="" className="max-h-96 w-full rounded-3xl object-cover" />}
+      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{article.title}</h1>
       <p className="text-sm text-gray-500">
         {article.author.displayName}
         {article.author.phone && ` · โทร ${article.author.phone}`} · {thaiDate(article.createdAt)}
       </p>
-      <p className="whitespace-pre-line leading-relaxed">{article.body}</p>
+      <p className="whitespace-pre-line rounded-2xl border border-gray-200 bg-white p-6 leading-8 sm:p-8">{article.body}</p>
     </article>
   );
 }

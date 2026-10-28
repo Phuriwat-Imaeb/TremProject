@@ -1,92 +1,217 @@
+import { Link, useNavigate } from 'react-router-dom';
+import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
 import { ButtonLink } from '../components/Button';
-import { APP_NAME } from '../config';
+import Icon from '../components/Icon';
+import TripCard from '../components/TripCard';
+import TripFilterForm from '../components/TripFilterForm';
+import { todayInThai } from '../format';
+import useApi from '../hooks/useApi';
 import usePageTitle from '../hooks/usePageTitle';
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1566152704884-2610b8197648?auto=format&fit=crop&w=1400&q=85';
+const TINTS = ['bg-tint-peach', 'bg-tint-mint', 'bg-tint-butter', 'bg-tint-sky'];
+
+const STEPS = [
+  { icon: 'search', title: '1. ค้นหารอบรถ', text: 'เลือกต้นทาง ปลายทาง และวันเดินทาง ดูรอบที่ยังเปิดขายทั้งหมด' },
+  { icon: 'seat', title: '2. เลือกที่นั่งเอง', text: 'ดูผังรถจริง ที่นั่งที่มีคนจองจะเปลี่ยนสีให้เห็นทันทีแบบเรียลไทม์' },
+  { icon: 'ticket', title: '3. รับตั๋วในเว็บ', text: 'จองแล้วได้ตั๋วทันที ยกเลิกเองได้จนถึงเวลารถออก' },
+];
+
+const duration = (min) => (min >= 60 ? `${Math.floor(min / 60)} ชม.${min % 60 ? ` ${min % 60} นาที` : ''}` : `${min} นาที`);
+const thaiDate = (iso) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
+
+// หัวของแต่ละส่วน: ชื่อ คำอธิบาย และลิงก์ "ดูทั้งหมด" ทางขวา
+function SectionHead({ title, subtitle, to, more }) {
+  return (
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-2xl font-bold">{title}</h2>
+        {subtitle && <p className="mt-1 text-gray-500">{subtitle}</p>}
+      </div>
+      {to && (
+        <Link to={to} className="text-sm font-semibold text-brand-700 hover:underline">
+          {more}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// การ์ดตัวเลขลอยบนกล่องภาพของ hero
+function FloatStat({ icon, tone, value, label, className }) {
+  return (
+    <div className={`absolute flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg ${className}`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-xl ${tone}`}>
+        <Icon name={icon} />
+      </span>
+      <span>
+        <span className="block text-lg font-bold">{value}</span>
+        <span className="block text-xs text-gray-500">{label}</span>
+      </span>
+    </div>
+  );
+}
 
 function Home() {
   usePageTitle(); // หน้าแรก ชื่อแท็บเป็นชื่อแอปอย่างเดียว
-  const { isLoggedIn, member } = useAuth();
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
+  const routes = useApi(() => api.listRoutes(), []);
+  const trips = useApi(() => api.listTrips({ routeId: '', date: '' }), []);
+  const articles = useApi(() => api.listArticles({}), []);
+  const routeItems = routes.data?.items ?? [];
+  const tripItems = trips.data?.items ?? [];
+  const articleItems = articles.data?.items.slice(0, 3) ?? [];
+
+  // กล่องค้นหาบนหน้าแรกพาไปหน้าค้นหารอบรถพร้อมตัวกรองใน URL
+  function search(next) {
+    const q = new URLSearchParams(Object.entries(next).filter(([, v]) => v)).toString();
+    navigate(q ? `/trips?${q}` : '/trips');
+  }
+
   return (
-    <div className="space-y-16 pb-8">
-      <section className="relative overflow-hidden rounded-3xl bg-brand-950 shadow-soft">
-        <div className="grid min-h-hero lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14">
-            <p className="mb-5 w-fit rounded-full border border-brand-700 bg-brand-900/70 px-4 py-2 text-sm font-semibold text-brand-100">
-              จองง่าย เลือกที่นั่งเอง เดินทางสบาย
+    <div>
+      <section className="bg-gray-50">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1.15fr_1fr] lg:py-20">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-3 py-1.5 text-xs font-medium text-brand-700">
+              <Icon name="heart" className="h-4 w-4" /> จองง่าย เลือกที่นั่งเอง เดินทางสบาย
             </p>
-            <h1 className="max-w-xl text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-              ทุกการเดินทาง
-              <span className="block text-brand-300">เริ่มต้นง่ายกว่าที่เคย</span>
+            {/* ภาษาไทยไม่มีเว้นวรรคระหว่างคำ แยกสองบรรทัดเอง ไม่ให้เบราว์เซอร์ตัดกลางคำ */}
+            <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+              <span className="block">ทุกการเดินทาง</span>
+              <span className="block">เริ่มต้นง่ายกว่าที่เคย</span>
             </h1>
-            <p className="mt-6 max-w-lg text-base leading-8 text-brand-100 sm:text-lg">
-              ค้นหารอบรถตู้และรถทัวร์ที่เหมาะกับคุณ เลือกที่นั่งจากผังจริง และจัดการการจองได้ครบในที่เดียว
+            <p className="mt-5 max-w-lg leading-7 text-gray-500">
+              ค้นหารอบรถตู้และรถทัวร์ เลือกที่นั่งจากผังรถจริง เห็นที่ว่างแบบเรียลไทม์ และจัดการการจองได้ครบในที่เดียว
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink to="/trips" variant="light">
-                ค้นหาเที่ยวรถ
+            <div className="mt-7 flex flex-wrap gap-3">
+              <ButtonLink to="/trips">
+                <Icon name="search" className="h-4 w-4" /> ค้นหาเที่ยวรถ
               </ButtonLink>
               <ButtonLink to={isLoggedIn ? '/bookings' : '/register'} variant="secondary">
-                {isLoggedIn ? 'ดูการจองของฉัน' : 'สมัครสมาชิก'}
+                <Icon name="ticket" className="h-4 w-4" /> {isLoggedIn ? 'การจองของฉัน' : 'สมัครสมาชิก'}
               </ButtonLink>
             </div>
-            {isLoggedIn && (
-              <p className="mt-6 text-sm text-brand-200">
-                ยินดีต้อนรับกลับมา คุณ{member?.displayName}
-              </p>
-            )}
-          </div>
-          <div className="relative min-h-80 lg:min-h-full">
-            <img
-              src={HERO_IMAGE}
-              alt="รถโดยสารบนเส้นทางเดินทาง"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/10 to-transparent lg:bg-gradient-to-r lg:from-brand-950 lg:via-transparent lg:to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/20 bg-white/90 p-4 shadow-soft backdrop-blur sm:left-auto sm:w-72">
-              <p className="text-xs font-bold uppercase tracking-widest text-brand-700">พร้อมออกเดินทาง</p>
-              <p className="mt-1 font-bold text-slate-950">เลือกที่นั่งที่ชอบได้ทันที</p>
-              <p className="mt-1 text-sm text-slate-600">เห็นสถานะที่นั่งแบบเรียลไทม์ก่อนยืนยัน</p>
+            <div className="mt-8 [&>form]:mb-0 [&>form]:shadow-sm">
+              <TripFilterForm routes={routeItems} routeId="" date="" minDate={todayInThai()} onSearch={search} />
             </div>
           </div>
+          <div className="relative mx-auto aspect-square w-full max-w-md rounded-[2rem] bg-brand-100">
+            <Icon name="bus" className="absolute inset-0 m-auto h-32 w-32 text-brand-300" strokeWidth={1.2} />
+            {trips.data && (
+              <FloatStat icon="ticket" tone="bg-brand-100 text-brand-500" value={`${tripItems.length} รอบ`} label="เปิดขายตอนนี้" className="right-3 top-8 lg:-right-3" />
+            )}
+            {routes.data && (
+              <FloatStat icon="route" tone="bg-mint-50 text-mint-600" value={`${routeItems.length} เส้นทาง`} label="ให้บริการทุกวัน" className="bottom-14 left-3 lg:-left-4" />
+            )}
+          </div>
         </div>
       </section>
 
-      <section>
-        <div className="mx-auto mb-9 max-w-2xl text-center">
-          <p className="text-sm font-bold uppercase tracking-widest text-brand-700">{APP_NAME}</p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">จองครบ จบใน 3 ขั้นตอน</h2>
-          <p className="mt-3 leading-7 text-slate-600">ออกแบบให้ทุกขั้นตอนตรงไปตรงมา เพื่อให้คุณใช้เวลากับการเดินทางมากกว่าการจอง</p>
-        </div>
-        <div className="grid gap-5 md:grid-cols-3">
-          {[
-            ['01', 'ค้นหาเที่ยวรถ', 'เลือกต้นทาง ปลายทาง และวันที่ต้องการเดินทาง'],
-            ['02', 'เลือกที่นั่ง', 'ดูผังรถและเลือกตำแหน่งที่นั่งที่เหมาะกับคุณ'],
-            ['03', 'ยืนยันการจอง', 'ตรวจสอบรายละเอียดและติดตามสถานะได้ทุกเมื่อ'],
-          ].map(([number, title, description]) => (
-            <article key={number} className="surface-card p-6 transition duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-soft">
-              <span className="text-sm font-extrabold tracking-widest text-brand-500">{number}</span>
-              <h3 className="mt-5 text-xl font-bold text-slate-950">{title}</h3>
-              <p className="mt-2 leading-7 text-slate-600">{description}</p>
-            </article>
-          ))}
+      {tripItems.length > 0 && (
+        <section className="bg-gray-50 pb-16">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <SectionHead title="รอบรถที่กำลังจะออก" subtitle="ที่นั่งยังว่าง กดเข้าไปเลือกที่นั่งได้เลย" to="/trips" more="ดูทั้งหมด" />
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {tripItems.slice(0, 4).map((t, i) => (
+                <TripCard key={t.id} trip={t} index={i} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <SectionHead title="ใช้งานง่ายใน 3 ขั้นตอน" />
+          <ol className="grid gap-5 md:grid-cols-3">
+            {STEPS.map((s) => (
+              <li key={s.title} className="rounded-2xl bg-gray-50 p-6">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-500 text-white">
+                  <Icon name={s.icon} />
+                </span>
+                <h3 className="mt-4 font-bold">{s.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-500">{s.text}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      <section className="grid overflow-hidden rounded-3xl border border-brand-100 bg-brand-50 lg:grid-cols-[1fr_auto]">
-        <div className="p-7 sm:p-10">
-          <p className="text-sm font-bold text-brand-700">ข้อมูลที่ช่วยให้เดินทางดีขึ้น</p>
-          <h2 className="mt-2 text-2xl font-extrabold text-brand-950 sm:text-3xl">อ่านคำแนะนำและเรื่องราวก่อนออกเดินทาง</h2>
-          <p className="mt-3 max-w-2xl leading-7 text-brand-800">
-            รวมบทความ ข่าวสาร และข้อมูลที่ควรรู้ เพื่อเตรียมตัวให้พร้อมสำหรับทุกเส้นทาง
-          </p>
-        </div>
-        <div className="flex items-center px-7 pb-7 sm:px-10 lg:pb-0">
-          <ButtonLink to="/articles" variant="primary">
-            สำรวจบทความ
-          </ButtonLink>
+      {routeItems.length > 0 && (
+        <section className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <SectionHead title="เส้นทางที่ให้บริการ" subtitle="กดที่เส้นทางเพื่อดูรอบรถทั้งหมดของเส้นทางนั้น" to="/trips" more="ดูรอบทั้งหมด" />
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {routeItems.map((r, i) => (
+                <li key={r.id}>
+                  <Link
+                    to={`/trips?routeId=${r.id}`}
+                    className="block overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    <div className={`grid h-28 place-items-center ${TINTS[i % TINTS.length]}`}>
+                      <Icon name="route" className="h-10 w-10 text-brand-300" strokeWidth={1.5} />
+                    </div>
+                    <div className="p-5">
+                      <p className="font-bold">
+                        {r.origin} → {r.destination}
+                      </p>
+                      <p className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                        <Icon name="clock" className="h-4 w-4 text-brand-500" /> ประมาณ {duration(r.durationMin)}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {articleItems.length > 0 && (
+        <section className="bg-white py-16">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <SectionHead title="บทความน่ารู้" subtitle="ข่าวสารและเคล็ดลับก่อนออกเดินทาง" to="/articles" more="อ่านทั้งหมด" />
+            <ul className="grid gap-5 md:grid-cols-3">
+              {articleItems.map((a, i) => (
+                <li key={a.id}>
+                  <Link
+                    to={`/articles/${a.id}`}
+                    className="block h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    {a.coverUrl ? (
+                      <img src={a.coverUrl} alt="" className="h-36 w-full object-cover" />
+                    ) : (
+                      <div className={`grid h-36 place-items-center ${TINTS[i % TINTS.length]}`}>
+                        <Icon name="fileText" className="h-10 w-10 text-brand-300" strokeWidth={1.5} />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <p className="text-xs text-gray-500">{thaiDate(a.createdAt)}</p>
+                      <p className="mt-1 font-bold">{a.title}</p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      <section className="bg-white pb-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-brand-500 px-8 py-10 text-white sm:px-12">
+            <div>
+              <h2 className="text-2xl font-bold">{isLoggedIn ? 'พร้อมออกเดินทางรอบถัดไปหรือยัง' : 'เป็นสมาชิกแล้วจองได้ในไม่กี่คลิก'}</h2>
+              <p className="mt-1 text-brand-50">
+                {isLoggedIn ? 'ดูตั๋วที่จองไว้ หรือหารอบใหม่ได้ทุกเมื่อ' : 'สมัครฟรี จองที่นั่ง ดูตั๋ว และยกเลิกการจองได้เองทั้งหมด'}
+              </p>
+            </div>
+            <ButtonLink to={isLoggedIn ? '/bookings' : '/register'} variant="light">
+              {isLoggedIn ? 'ดูการจองของฉัน' : 'สมัครสมาชิกฟรี'}
+            </ButtonLink>
+          </div>
         </div>
       </section>
     </div>

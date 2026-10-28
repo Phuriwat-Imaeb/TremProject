@@ -132,6 +132,10 @@ export function cancelBooking(id, token) {
 
 // ---------- หลังบ้าน: รอบรถ (staff หรือ admin) ----------
 // ทุกรอบ รวมที่ยกเลิก/ออกไปแล้ว ได้ { items, page, pageSize, total }
+// ตัวเลขของแดชบอร์ดหลังบ้าน { today, bookingsToday, seatsToday, revenueTodayBaht, upcomingTrips, daily, recentBookings, nextTrips }
+export function staffStats(token) {
+  return apiFetch('/api/staff/stats', { token });
+}
 export function staffListTrips({ routeId, date, page } = {}, token) {
   return apiFetch(withQuery('/api/staff/trips', { routeId, date, page }), { token });
 }

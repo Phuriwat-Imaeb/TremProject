@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 const ToastContext = createContext(null);
 
 const styles = {
-  success: 'border-teal-200 bg-teal-50 text-teal-900',
+  success: 'border-[#bfe5cd] bg-[#dff3e6] text-[#235f3b]',
   error: 'border-red-200 bg-red-50 text-red-800',
 };
 
@@ -37,7 +37,7 @@ export function ToastProvider({ children }) {
       {/* aria-live: โปรแกรมอ่านหน้าจออ่านข้อความใหม่ให้เอง */}
       <div aria-live="polite" className="fixed bottom-4 right-4 z-50 flex w-full max-w-xs flex-col gap-2 px-4 sm:px-0">
         {toasts.map((t) => (
-          <div key={t.id} className={`flex items-start gap-2 rounded-md border px-4 py-3 text-sm shadow ${styles[t.type]}`}>
+          <div key={t.id} className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-sm shadow-lg ${styles[t.type]}`}>
             <p className="flex-1">{t.message}</p>
             <button onClick={() => dismiss(t.id)} aria-label="ปิดข้อความ" className="opacity-60 hover:opacity-100">
               ✕

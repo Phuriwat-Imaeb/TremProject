@@ -16,7 +16,7 @@ function TripPassengers() {
   usePageTitle('รายชื่อผู้โดยสาร');
 
   const back = (
-    <Link to="/admin/trips" className="text-sm text-teal-700 hover:underline">
+    <Link to="/admin/trips" className="text-sm text-brand-700 hover:underline">
       ← รอบรถทั้งหมด
     </Link>
   );
@@ -50,7 +50,7 @@ function TripPassengers() {
         <EmptyState message="ยังไม่มีผู้โดยสาร" />
       ) : (
         // ตารางกว้างกว่าจอมือถือได้ ให้เลื่อนในกรอบตาราง หน้าเว็บทั้งหน้าไม่เลื่อนแนวนอน
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>

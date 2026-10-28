@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import * as api from '../api/backend';
 import { AuthProvider } from '../auth/AuthContext';
 import Profile from './Profile';
@@ -19,9 +20,11 @@ beforeEach(() => {
 async function renderPage() {
   await act(async () => {
     render(
-      <AuthProvider>
-        <Profile />
-      </AuthProvider>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          <Profile />
+        </AuthProvider>
+      </MemoryRouter>
     );
   });
 }
