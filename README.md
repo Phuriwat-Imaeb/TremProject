@@ -3,6 +3,9 @@
 API หลังบ้าน (Go + Gin + PostgreSQL) และหน้าเว็บ React ([web/](web)) วิชา 520342 Server Side Web Programming
 สัญญา API ทั้งหมดอยู่ใน [openapi.yaml](openapi.yaml)
 
+**ระบบจริง:** หน้าเว็บ https://trem-project.vercel.app · API https://tremproject-api.onrender.com (เช่น [/api/routes](https://tremproject-api.onrender.com/api/routes))
+Render แบบฟรีหลับเมื่อไม่มีคนใช้ เปิด `/api/routes` ปลุกก่อนเดโมราวหนึ่งนาที
+
 ## รันบนเครื่อง / Codespaces
 
 ```bash
@@ -80,7 +83,8 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 
 ## เส้นทางที่ทำแล้ว
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
+- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`,
+  `PUT /api/me/password` เปลี่ยนรหัสผ่าน (ต้องใส่รหัสเดิมให้ถูก ผิดตอบ 400 `WRONG_PASSWORD`)
 - `GET /api/routes` เส้นทางรถทั้งหมด
 - รอบรถ: `GET /api/trips?routeId=&date=YYYY-MM-DD` (เฉพาะรอบที่ยังจองได้ วันที่ตามเวลาไทย), `GET /api/trips/{id}`,
   `GET /api/trips/{id}/seats` ผังที่นั่ง `{ kind, seatCount, taken }`
@@ -106,7 +110,7 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
 ## หน้าเว็บที่ทำแล้ว
 
 - `/login`, `/register` สมัครเสร็จจะเข้าสู่ระบบให้ทันที
-- `/me` ข้อมูลบัญชี (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
+- `/me` ข้อมูลบัญชี + ฟอร์มเปลี่ยนรหัสผ่าน (ต้องเข้าสู่ระบบก่อน ไม่งั้นจะถูกพาไป `/login` แล้วกลับมาหน้าเดิมหลังเข้าสู่ระบบ)
 - `/trips` ค้นหารอบรถตามเส้นทาง/วัน (ตัวกรองอยู่ใน URL), `/trips/:id` รายละเอียดรอบ + ผังที่นั่ง เลือกที่นั่งแล้วกดจองได้
   ผังอัปเดตสดผ่าน WebSocket ถ้าที่นั่งที่เลือกไว้ถูกคนอื่นจองไปจะตัดออกและเตือน หลุดแล้วต่อใหม่เอง
 - `/bookings` การจองของฉัน (แบ่งหน้า), `/bookings/:id` หน้าตั๋ว + ปุ่มยกเลิกการจอง (ต้องเข้าสู่ระบบ)
