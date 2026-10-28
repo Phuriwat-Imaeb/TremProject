@@ -135,6 +135,35 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /api/me/password:
+    put:
+      tags: [Auth]
+      summary: เปลี่ยนรหัสผ่านของฉัน (ต้องใส่รหัสเดิมให้ถูก)
+      description: ตั๋วใบเดิมยังใช้ได้จนหมดอายุ รหัสเดิมผิดตอบ 400 ไม่ใช่ 401 เพราะตั๋วยังถูกต้อง
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: เปลี่ยนแล้ว
+        "400":
+          description: ข้อมูลผิด (BAD_JSON, BAD_PASSWORD, SAME_PASSWORD, WRONG_PASSWORD)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: WRONG_PASSWORD
+                  message: รหัสผ่านเดิมไม่ถูกต้อง
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /api/me/bookings:
     get:
       tags: [Bookings]
@@ -1171,6 +1200,17 @@ components:
         password:
           type: string
           example: password123
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          example: password123
+        newPassword:
+          type: string
+          minLength: 8
+          example: newpass456
     LoginResponse:
       type: object
       properties:

@@ -44,6 +44,9 @@ export function login(email, password) {
 export function getMe(token) {
   return apiFetch('/api/me', { token });
 }
+export function changePassword(currentPassword, newPassword, token) {
+  return apiFetch('/api/me/password', { method: 'PUT', body: { currentPassword, newPassword }, token }); // 204 ได้ null
+}
 
 // ต่อ query string ให้ path ข้ามค่าที่ว่าง เช่น withQuery('/api/articles', { q: 'แมว', page: 2 })
 // → '/api/articles?q=%E0%B9%81...&page=2' (URLSearchParams เข้ารหัสภาษาไทยให้เอง)

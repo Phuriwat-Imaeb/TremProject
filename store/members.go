@@ -94,3 +94,25 @@ func (s *Store) SetMemberRole(ctx context.Context, id int64, role string) (Membe
 	}
 	return m, err
 }
+
+// PasswordHashByID ดึง hash ของเจ้าของตั๋ว ใช้ตรวจรหัสเดิมก่อนเปลี่ยนรหัสผ่าน
+func (s *Store) PasswordHashByID(ctx context.Context, id int64) (string, error) {
+	var hash string
+	err := s.Pool.QueryRow(ctx, `SELECT password_hash FROM members WHERE id = $1`, id).Scan(&hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return hash, err
+}
+
+// SetPasswordHash เก็บ hash ใหม่ ไม่มี id นี้ → ErrNotFound
+func (s *Store) SetPasswordHash(ctx context.Context, id int64, hash string) error {
+	tag, err := s.Pool.Exec(ctx, `UPDATE members SET password_hash = $2 WHERE id = $1`, id, hash)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

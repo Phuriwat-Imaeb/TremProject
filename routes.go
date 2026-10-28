@@ -26,6 +26,7 @@ func routes(h *handler.Handler, tickets *auth.Issuer, origins []string) *gin.Eng
 	api.POST("/auth/register", h.Register)
 	api.POST("/auth/login", h.Login)
 	api.GET("/me", login, h.Me)
+	api.PUT("/me/password", login, h.ChangePassword)
 	api.GET("/me/bookings", login, h.MyBookings)
 	api.GET("/routes", h.ListRoutes)
 	api.GET("/trips", h.ListTrips)

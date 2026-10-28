@@ -620,3 +620,49 @@ func TestTripPassengersAndVehicles(t *testing.T) {
 		t.Errorf("ต้องได้รถ 3 คัน ได้ %d %+v", code, vs.Items)
 	}
 }
+
+func TestChangePassword(t *testing.T) {
+	srv, _ := newTestServer(t)
+	// สมัครบัญชีใหม่ทุกครั้ง ไม่แตะรหัสของบัญชีใน seed ที่เทสต์อื่นใช้
+	email := fmt.Sprintf("pw-%d@example.com", time.Now().UnixNano())
+	reg := map[string]any{"email": email, "password": "oldpass123", "displayName": "เปลี่ยนรหัส"}
+	if code := call(t, srv, "POST", "/api/auth/register", "", reg, nil); code != 201 {
+		t.Fatalf("สมัคร ต้องได้ 201 ได้ %d", code)
+	}
+	var lr struct{ Token string }
+	if code := call(t, srv, "POST", "/api/auth/login", "", map[string]any{"email": email, "password": "oldpass123"}, &lr); code != 200 {
+		t.Fatalf("login ต้องได้ 200 ได้ %d", code)
+	}
+
+	change := func(token, current, next string) (int, string) {
+		var e struct{ Error struct{ Code string } }
+		code := call(t, srv, "PUT", "/api/me/password", token,
+			map[string]any{"currentPassword": current, "newPassword": next}, &e)
+		return code, e.Error.Code
+	}
+
+	if code := call(t, srv, "PUT", "/api/me/password", "", map[string]any{"currentPassword": "oldpass123", "newPassword": "newpass456"}, nil); code != 401 {
+		t.Errorf("ไม่มีตั๋ว ต้องได้ 401 ได้ %d", code)
+	}
+	cases := []struct{ current, next, want string }{
+		{"oldpass123", "short", "BAD_PASSWORD"},
+		{"oldpass123", "oldpass123", "SAME_PASSWORD"},
+		{"wrongpass1", "newpass456", "WRONG_PASSWORD"}, // 400 ไม่ใช่ 401 หน้าเว็บจะได้ไม่พาออกจากระบบ
+	}
+	for _, tc := range cases {
+		if code, got := change(lr.Token, tc.current, tc.next); code != 400 || got != tc.want {
+			t.Errorf("%q → %q ต้องได้ 400 %s ได้ %d %s", tc.current, tc.next, tc.want, code, got)
+		}
+	}
+
+	ok := map[string]any{"currentPassword": "oldpass123", "newPassword": "newpass456"}
+	if code := call(t, srv, "PUT", "/api/me/password", lr.Token, ok, nil); code != 204 { // 204 ไม่มี body จึงไม่อ่าน JSON
+		t.Fatalf("เปลี่ยนรหัส ต้องได้ 204 ได้ %d", code)
+	}
+	if code := call(t, srv, "POST", "/api/auth/login", "", map[string]any{"email": email, "password": "oldpass123"}, nil); code != 401 {
+		t.Errorf("รหัสเดิมต้อง login ไม่ได้แล้ว ได้ %d", code)
+	}
+	if code := call(t, srv, "POST", "/api/auth/login", "", map[string]any{"email": email, "password": "newpass456"}, nil); code != 200 {
+		t.Errorf("รหัสใหม่ต้อง login ได้ ได้ %d", code)
+	}
+}
