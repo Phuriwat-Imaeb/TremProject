@@ -99,14 +99,14 @@ function TripDetail() {
   return (
     <div className="space-y-6">
       {back}
-      <section className="rounded-md border border-gray-200 bg-white p-4">
-        <h1 className="text-2xl font-bold">
+      <section className="rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-700 p-6 text-white shadow-md">
+        <h1 className="text-2xl font-bold sm:text-3xl">
           {t.route.origin} → {t.route.destination}
         </h1>
-        <p className="mt-1 text-gray-700">
+        <p className="mt-2 text-teal-50">
           {thaiDay(t.departAt)} · ออก {thaiTime(t.departAt)} ถึงประมาณ {thaiTime(t.arriveAt)}
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="mt-1 text-sm text-teal-100">
           {VEHICLE_LABEL[t.vehicle.kind]} ทะเบียน {t.vehicle.plate} · ที่นั่งละ {baht(t.priceBaht)} · ว่าง {seatsLeft} จาก{' '}
           {t.vehicle.seatCount} ที่
         </p>
@@ -116,12 +116,12 @@ function TripDetail() {
       {t.status !== 'cancelled' && t.departed && <Alert>รถรอบนี้ออกไปแล้ว</Alert>}
 
       {!closed && (
-        <section className="rounded-md border border-gray-200 bg-white p-4">
+        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">เลือกที่นั่ง</h2>
             {live && (
               <span className="flex items-center gap-1 text-xs text-teal-700">
-                <span aria-hidden="true" className="h-2 w-2 rounded-full bg-teal-500" /> อัปเดตสด
+                <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-teal-500" /> อัปเดตสด
               </span>
             )}
           </div>

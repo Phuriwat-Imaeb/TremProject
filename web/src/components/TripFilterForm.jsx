@@ -18,7 +18,7 @@ function TripFilterForm({ routes, routeId, date, minDate, onSearch }) {
   return (
     <form
       onSubmit={submit}
-      className="mb-6 grid gap-3 rounded-md border border-gray-200 bg-white p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+      className="mb-6 grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-[1fr_auto_auto] sm:items-end"
     >
       <Field as="select" label="เส้นทาง" value={form.routeId} onChange={set('routeId')}>
         <option value="">ทุกเส้นทาง</option>

@@ -3,9 +3,9 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { APP_NAME } from '../config';
 
-const linkBase = 'rounded-md px-3 py-2 text-sm font-medium';
+const linkBase = 'rounded-full px-3 py-2 text-sm font-medium transition-colors';
 const linkClass = ({ isActive }) =>
-  `${linkBase} ${isActive ? 'bg-teal-700 text-white' : 'text-teal-50 hover:bg-teal-500'}`;
+  `${linkBase} ${isActive ? 'bg-teal-50 text-teal-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`;
 
 // จอกว้าง (md ขึ้นไป) ลิงก์เรียงเป็นแถว จอแคบซ่อนไว้หลังปุ่ม ☰ กดแล้วกางลงมาเป็นคอลัมน์
 function Navbar() {
@@ -44,7 +44,7 @@ function Navbar() {
           <NavLink to="/me" className={linkClass}>
             {member?.displayName ?? 'บัญชีของฉัน'}
           </NavLink>
-          <button onClick={handleLogout} className={`${linkBase} text-left text-teal-50 hover:bg-teal-500`}>
+          <button onClick={handleLogout} className={`${linkBase} text-left text-gray-600 hover:bg-red-50 hover:text-red-700`}>
             ออกจากระบบ
           </button>
         </>
@@ -53,7 +53,7 @@ function Navbar() {
           <NavLink to="/login" className={linkClass}>
             เข้าสู่ระบบ
           </NavLink>
-          <NavLink to="/register" className={linkClass}>
+          <NavLink to="/register" className={`${linkBase} bg-teal-600 text-center text-white hover:bg-teal-700`}>
             สมัครสมาชิก
           </NavLink>
         </>
@@ -62,14 +62,17 @@ function Navbar() {
   );
 
   return (
-    <nav className="bg-teal-600">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
-        <Link to="/" className="text-lg font-bold text-white">
+    <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
+        <Link to="/" className="flex items-center gap-2 text-lg font-bold text-gray-900">
+          <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-teal-600 text-xs font-bold text-white">
+            JK
+          </span>
           {APP_NAME}
         </Link>
         <div className="hidden items-center gap-1 md:flex">{links}</div>
         <button
-          className="rounded-md p-2 text-white hover:bg-teal-500 md:hidden"
+          className="rounded-md p-2 text-gray-700 hover:bg-gray-100 md:hidden"
           aria-label={open ? 'ปิดเมนู' : 'เปิดเมนู'}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -81,7 +84,7 @@ function Navbar() {
         </button>
       </div>
       {open && (
-        <div id="mobile-menu" className="flex flex-col gap-1 border-t border-teal-500 px-4 py-2 md:hidden">
+        <div id="mobile-menu" className="flex flex-col gap-1 border-t border-gray-200 px-4 py-2 md:hidden">
           {links}
         </div>
       )}

@@ -11,25 +11,48 @@ import usePageTitle from '../hooks/usePageTitle';
 
 function TripCard({ trip }) {
   const full = trip.seatsLeft === 0;
+  const few = !full && trip.seatsLeft <= 3;
+  const seats = full ? 'เต็มแล้ว' : `ว่าง ${trip.seatsLeft} ที่`;
   return (
-    <li className="rounded-md border border-gray-200 bg-white p-4">
-      <Link to={`/trips/${trip.id}`} className="flex flex-wrap items-center justify-between gap-3 hover:opacity-90">
-        <div>
-          <p className="text-lg font-semibold text-teal-700">
-            {thaiTime(trip.departAt)} → {thaiTime(trip.arriveAt)}
-          </p>
-          <p className="text-gray-700">
-            {trip.route.origin} → {trip.route.destination}
-          </p>
-          <p className="text-sm text-gray-500">
-            {thaiDay(trip.departAt)} · {VEHICLE_LABEL[trip.vehicle.kind]}
-          </p>
+    <li>
+      {/* เส้นเวลาในการ์ดเป็นภาพตกแต่ง จึงบอกใจความทั้งใบให้โปรแกรมอ่านหน้าจอใน aria-label */}
+      <Link
+        to={`/trips/${trip.id}`}
+        aria-label={`${thaiTime(trip.departAt)} → ${thaiTime(trip.arriveAt)} ${trip.route.origin} → ${trip.route.destination} · ${thaiDay(trip.departAt)} · ${VEHICLE_LABEL[trip.vehicle.kind]} · ${baht(trip.priceBaht)} · ${seats}`}
+        className="group flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md sm:flex-row sm:items-center"
+      >
+        <div className="flex flex-1 items-center gap-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-gray-900">{thaiTime(trip.departAt)}</p>
+            <p className="text-sm text-gray-500">{trip.route.origin}</p>
+          </div>
+          {/* เส้นเวลาเดินทาง: จุดต้นทาง ── รถ ── จุดปลายทาง */}
+          <div aria-hidden="true" className="flex flex-1 items-center gap-1 text-teal-600">
+            <span className="h-2 w-2 rounded-full border-2 border-teal-600" />
+            <span className="h-px flex-1 border-t-2 border-dashed border-teal-200" />
+            <span className="text-base">{trip.vehicle.kind === 'bus' ? '🚌' : '🚐'}</span>
+            <span className="h-px flex-1 border-t-2 border-dashed border-teal-200" />
+            <span className="h-2 w-2 rounded-full bg-teal-600" />
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-gray-900">{thaiTime(trip.arriveAt)}</p>
+            <p className="text-sm text-gray-500">{trip.route.destination}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-semibold">{baht(trip.priceBaht)}</p>
-          <p className={`text-sm ${full ? 'text-red-700' : 'text-gray-600'}`}>
-            {full ? 'เต็มแล้ว' : `ว่าง ${trip.seatsLeft} ที่`}
-          </p>
+        <div className="flex items-center justify-between gap-4 border-t border-dashed border-gray-200 pt-4 sm:block sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 sm:text-right">
+          <div>
+            <p className="text-xs text-gray-500">
+              {thaiDay(trip.departAt)} · {VEHICLE_LABEL[trip.vehicle.kind]}
+            </p>
+            <p className="text-xl font-bold text-teal-700">{baht(trip.priceBaht)}</p>
+          </div>
+          <span
+            className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              full ? 'bg-red-50 text-red-700' : few ? 'bg-amber-50 text-amber-700' : 'bg-teal-50 text-teal-700'
+            }`}
+          >
+            {seats}
+          </span>
         </div>
       </Link>
     </li>
