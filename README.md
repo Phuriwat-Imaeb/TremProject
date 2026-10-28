@@ -95,7 +95,8 @@ GitHub Actions รัน gofmt, go vet, build, schema/seed และเทสต
   `GET /api/bookings/{id}` (ของตัวเอง หรือ staff/admin ดูได้ทุกรายการ),
   `POST /api/bookings/{id}/cancel` ยกเลิกของตัวเองได้จนถึงเวลารถออก ที่นั่งกลับมาว่างทันที,
   `GET /api/me/bookings?page=` การจองของฉัน หน้าละ 10
-- หลังบ้านพนักงาน (staff หรือ admin): `GET /api/staff/trips?routeId=&date=&page=` ทุกรอบรวมที่ปิดแล้ว,
+- หลังบ้านพนักงาน (staff หรือ admin): `GET /api/staff/stats` ตัวเลขแดชบอร์ด (จอง/ที่นั่ง/รายได้วันนี้ ตามเวลาไทย,
+  กราฟ 7 วัน, การจองล่าสุด, รอบที่จะออกถัดไป), `GET /api/staff/trips?routeId=&date=&page=` ทุกรอบรวมที่ปิดแล้ว,
   `POST /api/staff/trips` เพิ่มรอบ (รถคันเดิมเวลาเดิมตอบ 409 `VEHICLE_BUSY`), `PUT /api/staff/trips/{id}` แก้เวลาออก/ราคา,
   `POST /api/staff/trips/{id}/cancel` ยกเลิกรอบพร้อมการจองทั้งหมดใน transaction เดียว,
   `GET /api/staff/trips/{id}/passengers` รายชื่อผู้โดยสาร, `GET /api/staff/vehicles` คันรถ

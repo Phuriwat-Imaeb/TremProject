@@ -446,6 +446,24 @@ paths:
   # ===================================================================
   # Staff (staff หรือ admin ไม่ใช่ตอบ 403)
   # ===================================================================
+  /api/staff/stats:
+    get:
+      tags: [Staff]
+      summary: ตัวเลขของหน้าแดชบอร์ดหลังบ้าน (วันนี้นับตามเวลาไทย)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: การ์ดตัวเลข กราฟ 7 วัน การจองล่าสุด 6 รายการ และรอบที่จะออกถัดไป 5 รอบ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /api/staff/trips:
     get:
       tags: [Staff]
@@ -1435,6 +1453,49 @@ components:
             type: integer
             minimum: 1
           example: [3, 4]
+    Stats:
+      type: object
+      properties:
+        today:
+          type: string
+          format: date
+          example: "2026-10-28"
+        bookingsToday:
+          type: integer
+          description: การจองที่เกิดวันนี้และยังไม่ยกเลิก
+        seatsToday:
+          type: integer
+        revenueTodayBaht:
+          type: integer
+        upcomingTrips:
+          type: integer
+          description: รอบที่เปิดขายและจะออกภายใน 7 วัน
+        daily:
+          type: array
+          description: 7 วันล่าสุด เก่าไปใหม่ วันสุดท้ายคือวันนี้
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              confirmed:
+                type: integer
+              cancelled:
+                type: integer
+        recentBookings:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/Booking"
+              - type: object
+                properties:
+                  member:
+                    $ref: "#/components/schemas/Person"
+        nextTrips:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trip"
     Booking:
       type: object
       properties:

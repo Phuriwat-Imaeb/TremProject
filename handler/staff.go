@@ -160,3 +160,13 @@ func (h *Handler) StaffListVehicles(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, map[string]any{"items": items})
 }
+
+// StaffStats  GET /api/staff/stats  ตัวเลขของหน้าแดชบอร์ดหลังบ้าน (staff และ admin เห็นเหมือนกัน)
+func (h *Handler) StaffStats(c *gin.Context) {
+	st, err := h.Store.Stats(c.Request.Context())
+	if err != nil {
+		internal(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, st)
+}

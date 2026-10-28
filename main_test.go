@@ -666,3 +666,49 @@ func TestChangePassword(t *testing.T) {
 		t.Errorf("รหัสใหม่ต้อง login ได้ ได้ %d", code)
 	}
 }
+
+func TestStaffStats(t *testing.T) {
+	srv, tickets := newTestServer(t)
+	// id ตาม seed.sql: 2 = staff, 3 = นิดา (member), 4 = ต้น (member)
+	staff, _ := tickets.Issue(2, "staff")
+	member, _ := tickets.Issue(3, "member")
+	ton, _ := tickets.Issue(4, "member")
+
+	if code := call(t, srv, "GET", "/api/staff/stats", "", nil, nil); code != 401 {
+		t.Errorf("ไม่มีตั๋ว ต้องได้ 401 ได้ %d", code)
+	}
+	if code := call(t, srv, "GET", "/api/staff/stats", member, nil, nil); code != 403 {
+		t.Errorf("member ต้องได้ 403 ได้ %d", code)
+	}
+
+	var before store.Stats
+	if code := call(t, srv, "GET", "/api/staff/stats", staff, nil, &before); code != 200 {
+		t.Fatalf("staff ต้องได้ 200 ได้ %d", code)
+	}
+	if len(before.Daily) != 7 || before.Daily[6].Date != before.Today {
+		t.Fatalf("กราฟต้องมี 7 วันและวันสุดท้ายคือวันนี้ (%s) ได้ %+v", before.Today, before.Daily)
+	}
+	if len(before.NextTrips) == 0 {
+		t.Fatal("seed มีรอบที่ยังไม่ออก ต้องมี nextTrips")
+	}
+
+	// จองจริง 1 ที่ (รอบ 2 ตาม seed ที่นั่งละ 80 บาท) ตัวเลขของวันนี้ต้องขยับตาม
+	var b store.Booking
+	if code := call(t, srv, "POST", "/api/bookings", ton, map[string]any{"tripId": 2, "seats": []int{12}}, &b); code != 201 {
+		t.Fatalf("จอง ต้องได้ 201 ได้ %d", code)
+	}
+	t.Cleanup(func() { dbExec(t, `DELETE FROM bookings WHERE id = $1`, b.ID) })
+
+	var after store.Stats
+	call(t, srv, "GET", "/api/staff/stats", staff, nil, &after)
+	if after.BookingsToday != before.BookingsToday+1 || after.SeatsToday != before.SeatsToday+1 ||
+		after.RevenueTodayBaht != before.RevenueTodayBaht+b.TotalBaht {
+		t.Errorf("ตัวเลขวันนี้ต้องเพิ่ม 1 การจอง 1 ที่ %d บาท ก่อน %+v หลัง %+v", b.TotalBaht, before, after)
+	}
+	if after.Daily[6].Confirmed != before.Daily[6].Confirmed+1 {
+		t.Errorf("กราฟวันนี้ต้องเพิ่ม 1 ก่อน %d หลัง %d", before.Daily[6].Confirmed, after.Daily[6].Confirmed)
+	}
+	if len(after.RecentBookings) == 0 || after.RecentBookings[0].ID != b.ID || after.RecentBookings[0].Member.DisplayName != "ต้น" {
+		t.Errorf("การจองล่าสุดต้องเป็นของต้นที่เพิ่งจอง ได้ %+v", after.RecentBookings)
+	}
+}

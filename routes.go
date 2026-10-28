@@ -42,6 +42,7 @@ func routes(h *handler.Handler, tickets *auth.Issuer, origins []string) *gin.Eng
 
 	// group: ทุกเส้นทางใต้ /api/staff ต้องผ่าน login + บทบาท staff หรือ admin ก่อน ไม่ต้องเขียนซ้ำทีละบรรทัด
 	staff := api.Group("/staff", login, mw.RequireRole("staff", "admin"))
+	staff.GET("/stats", h.StaffStats)
 	staff.GET("/trips", h.StaffListTrips)
 	staff.POST("/trips", h.CreateTrip)
 	staff.PUT("/trips/:id", h.UpdateTrip)
