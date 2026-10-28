@@ -55,14 +55,12 @@ function BookingDetail() {
   return (
     <div className="space-y-4">
       {back}
-      <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-gray-200 bg-gradient-to-r from-teal-50 to-white p-5">
-          <h1 className="text-xl font-bold">
-            <span aria-hidden="true">🎫 </span>การจอง #{b.id}
-          </h1>
+      <article className="rounded-md border border-gray-200 bg-white">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-gray-300 p-4">
+          <h1 className="text-xl font-bold">การจอง #{b.id}</h1>
           <BookingStatus booking={b} />
         </header>
-        <dl className="grid gap-5 p-5 sm:grid-cols-2">
+        <dl className="grid gap-4 p-4 sm:grid-cols-2">
           <div>
             <dt className="text-sm text-gray-500">เส้นทาง</dt>
             <dd className="text-lg font-semibold">

@@ -1,127 +1,94 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
 import { ButtonLink } from '../components/Button';
 import { APP_NAME } from '../config';
-import useApi from '../hooks/useApi';
 import usePageTitle from '../hooks/usePageTitle';
 
-// ขั้นตอนการจอง 3 ข้อ (ข้อความล้วน ไม่ต้องโหลดอะไร)
-const STEPS = [
-  { title: 'ค้นหาเที่ยวรถ', text: 'เลือกต้นทาง ปลายทาง และวันที่ต้องการเดินทาง' },
-  { title: 'เลือกที่นั่ง', text: 'ดูผังรถและเลือกตำแหน่งที่นั่งที่เหมาะกับคุณ' },
-  { title: 'ยืนยันการจอง', text: 'ตรวจสอบรายละเอียดและติดตามสถานะได้ทุกเวลา' },
-];
-
-const duration = (min) => (min >= 60 ? `${Math.floor(min / 60)} ชม.${min % 60 ? ` ${min % 60} นาที` : ''}` : `${min} นาที`);
-
-// รูปฝั่งขวาของ hero อยู่ที่ public/hero.jpg ถ้ายังไม่มีไฟล์ (โหลดไม่ขึ้น) ก็ซ่อนรูป เหลือพื้นไล่สีแทน
-function HeroImage() {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="relative min-h-[240px] overflow-hidden bg-gradient-to-br from-teal-800 to-emerald-600 md:min-h-full">
-      {!failed && (
-        <img
-          src={`${process.env.PUBLIC_URL}/hero.jpg`}
-          alt=""
-          onError={() => setFailed(true)}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      )}
-      {/* ไล่สีจากพื้นเขียวเข้มของฝั่งข้อความ ให้รูปกลืนเข้าหากัน */}
-      <div className="absolute inset-0 bg-gradient-to-b from-teal-950 via-teal-950/30 to-transparent md:bg-gradient-to-r" />
-      <div className="absolute bottom-4 right-4 max-w-[16rem] rounded-xl bg-white/95 p-4 text-gray-900 shadow-lg">
-        <p className="text-xs font-semibold text-teal-700">พร้อมออกเดินทาง</p>
-        <p className="mt-0.5 font-bold">เลือกที่นั่งชอบได้ทันที</p>
-        <p className="mt-1 text-xs text-gray-500">เห็นสถานะที่นั่งแบบเรียลไทม์ก่อนยืนยัน</p>
-      </div>
-    </div>
-  );
-}
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1566152704884-2610b8197648?auto=format&fit=crop&w=1400&q=85';
 
 function Home() {
   usePageTitle(); // หน้าแรก ชื่อแท็บเป็นชื่อแอปอย่างเดียว
   const { isLoggedIn, member } = useAuth();
-  const routes = useApi(() => api.listRoutes(), []);
-  const items = routes.data?.items ?? [];
-
   return (
-    <div className="space-y-16">
-      <section className="grid overflow-hidden rounded-3xl bg-teal-950 text-white shadow-xl md:grid-cols-[1.15fr_1fr]">
-        <div className="px-6 py-10 sm:px-10 sm:py-14">
-          <p className="inline-block rounded-full border border-white/25 px-3 py-1 text-xs text-teal-100">
-            {isLoggedIn ? `สวัสดี ${member?.displayName}` : 'จองง่าย เลือกที่นั่งเอง เดินทางสบาย'}
-          </p>
-          {/* ภาษาไทยไม่มีเว้นวรรคระหว่างคำ แยกเป็นสองบรรทัดเอง ไม่ให้เบราว์เซอร์ตัดกลางคำ */}
-          <h1 className="mt-5 text-3xl font-bold leading-tight sm:text-5xl">
-            <span className="block">ทุกการเดินทาง</span>
-            <span className="block text-teal-300">เริ่มต้นง่ายกว่าที่เคย</span>
-          </h1>
-          <p className="mt-5 max-w-md text-teal-50/90">
-            ค้นหารอบรถตู้และรถทัวร์ที่เหมาะกับคุณ เลือกที่นั่งจากผังจริง และจัดการการจองได้ครบในที่เดียว
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink to="/trips" variant="secondary" className="border-transparent text-teal-900">
-              ค้นหาเที่ยวรถ
-            </ButtonLink>
-            {isLoggedIn ? (
-              <ButtonLink to="/bookings" variant="secondary" className="border-transparent text-teal-900">
-                การจองของฉัน
+    <div className="space-y-16 pb-8">
+      <section className="relative overflow-hidden rounded-3xl bg-brand-950 shadow-soft">
+        <div className="grid min-h-hero lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14">
+            <p className="mb-5 w-fit rounded-full border border-brand-700 bg-brand-900/70 px-4 py-2 text-sm font-semibold text-brand-100">
+              จองง่าย เลือกที่นั่งเอง เดินทางสบาย
+            </p>
+            <h1 className="max-w-xl text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+              ทุกการเดินทาง
+              <span className="block text-brand-300">เริ่มต้นง่ายกว่าที่เคย</span>
+            </h1>
+            <p className="mt-6 max-w-lg text-base leading-8 text-brand-100 sm:text-lg">
+              ค้นหารอบรถตู้และรถทัวร์ที่เหมาะกับคุณ เลือกที่นั่งจากผังจริง และจัดการการจองได้ครบในที่เดียว
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <ButtonLink to="/trips" variant="light">
+                ค้นหาเที่ยวรถ
               </ButtonLink>
-            ) : (
-              <ButtonLink to="/register" variant="secondary" className="border-transparent text-teal-900">
-                สมัครสมาชิก
+              <ButtonLink to={isLoggedIn ? '/bookings' : '/register'} variant="secondary">
+                {isLoggedIn ? 'ดูการจองของฉัน' : 'สมัครสมาชิก'}
               </ButtonLink>
+            </div>
+            {isLoggedIn && (
+              <p className="mt-6 text-sm text-brand-200">
+                ยินดีต้อนรับกลับมา คุณ{member?.displayName}
+              </p>
             )}
           </div>
+          <div className="relative min-h-80 lg:min-h-full">
+            <img
+              src={HERO_IMAGE}
+              alt="รถโดยสารบนเส้นทางเดินทาง"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/10 to-transparent lg:bg-gradient-to-r lg:from-brand-950 lg:via-transparent lg:to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/20 bg-white/90 p-4 shadow-soft backdrop-blur sm:left-auto sm:w-72">
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-700">พร้อมออกเดินทาง</p>
+              <p className="mt-1 font-bold text-slate-950">เลือกที่นั่งที่ชอบได้ทันที</p>
+              <p className="mt-1 text-sm text-slate-600">เห็นสถานะที่นั่งแบบเรียลไทม์ก่อนยืนยัน</p>
+            </div>
+          </div>
         </div>
-        <HeroImage />
       </section>
 
-      <section aria-labelledby="steps" className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">{APP_NAME}</p>
-        <h2 id="steps" className="mt-2 text-2xl font-bold sm:text-3xl">
-          จองครบ จบใน 3 ขั้นตอน
-        </h2>
-        <p className="mx-auto mt-2 max-w-xl text-gray-600">
-          ออกแบบให้ทุกขั้นตอนตรงไปตรงมา เพื่อให้คุณใช้เวลากับการเดินทางมากกว่าการจอง
-        </p>
-        <ol className="mt-8 grid gap-4 text-left sm:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <p className="text-xs font-semibold text-teal-600">{String(i + 1).padStart(2, '0')}</p>
-              <h3 className="mt-3 text-lg font-bold">{s.title}</h3>
-              <p className="mt-1 text-sm text-gray-600">{s.text}</p>
-            </li>
+      <section>
+        <div className="mx-auto mb-9 max-w-2xl text-center">
+          <p className="text-sm font-bold uppercase tracking-widest text-brand-700">{APP_NAME}</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">จองครบ จบใน 3 ขั้นตอน</h2>
+          <p className="mt-3 leading-7 text-slate-600">ออกแบบให้ทุกขั้นตอนตรงไปตรงมา เพื่อให้คุณใช้เวลากับการเดินทางมากกว่าการจอง</p>
+        </div>
+        <div className="grid gap-5 md:grid-cols-3">
+          {[
+            ['01', 'ค้นหาเที่ยวรถ', 'เลือกต้นทาง ปลายทาง และวันที่ต้องการเดินทาง'],
+            ['02', 'เลือกที่นั่ง', 'ดูผังรถและเลือกตำแหน่งที่นั่งที่เหมาะกับคุณ'],
+            ['03', 'ยืนยันการจอง', 'ตรวจสอบรายละเอียดและติดตามสถานะได้ทุกเมื่อ'],
+          ].map(([number, title, description]) => (
+            <article key={number} className="surface-card p-6 transition duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-soft">
+              <span className="text-sm font-extrabold tracking-widest text-brand-500">{number}</span>
+              <h3 className="mt-5 text-xl font-bold text-slate-950">{title}</h3>
+              <p className="mt-2 leading-7 text-slate-600">{description}</p>
+            </article>
           ))}
-        </ol>
+        </div>
       </section>
 
-      {items.length > 0 && (
-        <section aria-labelledby="popular">
-          <h2 id="popular" className="mb-4 text-xl font-bold">
-            เส้นทางที่เปิดให้บริการ
-          </h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {items.map((r) => (
-              <li key={r.id}>
-                <Link
-                  to={`/trips?routeId=${r.id}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md"
-                >
-                  <span className="font-medium">
-                    {r.origin} <span className="text-teal-600">→</span> {r.destination}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600">
-                    ประมาณ {duration(r.durationMin)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="grid overflow-hidden rounded-3xl border border-brand-100 bg-brand-50 lg:grid-cols-[1fr_auto]">
+        <div className="p-7 sm:p-10">
+          <p className="text-sm font-bold text-brand-700">ข้อมูลที่ช่วยให้เดินทางดีขึ้น</p>
+          <h2 className="mt-2 text-2xl font-extrabold text-brand-950 sm:text-3xl">อ่านคำแนะนำและเรื่องราวก่อนออกเดินทาง</h2>
+          <p className="mt-3 max-w-2xl leading-7 text-brand-800">
+            รวมบทความ ข่าวสาร และข้อมูลที่ควรรู้ เพื่อเตรียมตัวให้พร้อมสำหรับทุกเส้นทาง
+          </p>
+        </div>
+        <div className="flex items-center px-7 pb-7 sm:px-10 lg:pb-0">
+          <ButtonLink to="/articles" variant="primary">
+            สำรวจบทความ
+          </ButtonLink>
+        </div>
+      </section>
     </div>
   );
 }

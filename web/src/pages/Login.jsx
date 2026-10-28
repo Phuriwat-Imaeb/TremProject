@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import Alert from '../components/Alert';
-import AuthCard from '../components/AuthCard';
 import Button from '../components/Button';
 import Field from '../components/Field';
 import usePageTitle from '../hooks/usePageTitle';
@@ -35,7 +34,9 @@ function Login() {
   }
 
   return (
-    <AuthCard title="เข้าสู่ระบบ" tagline="ดูตั๋วที่จองไว้ และจองที่นั่งรอบถัดไปได้ในไม่กี่คลิก">
+    <div className="mx-auto max-w-md rounded-3xl border border-slate-200/80 bg-white p-6 shadow-soft sm:p-9">
+      <p className="text-sm font-bold text-brand-700">ยินดีต้อนรับกลับมา</p>
+      <h1 className="mb-7 mt-2 text-3xl font-extrabold tracking-tight text-slate-950">เข้าสู่ระบบ</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* ถูกพาออกจากระบบเพราะตั๋วหมดอายุ บอกเหตุผล (ถ้ามี error ใหม่ โชว์ error แทน) */}
         {notice && !error && <Alert type="info">{notice}</Alert>}
@@ -60,13 +61,13 @@ function Login() {
           {status === 'submitting' ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
         </Button>
       </form>
-      <p className="mt-4 text-center text-sm text-gray-600">
+      <p className="mt-6 text-center text-sm text-slate-600">
         ยังไม่มีบัญชี?{' '}
-        <Link to="/register" state={{ from }} className="text-teal-700 hover:underline">
+        <Link to="/register" state={{ from }} className="font-semibold text-brand-700 hover:text-brand-800">
           สมัครสมาชิก
         </Link>
       </p>
-    </AuthCard>
+    </div>
   );
 }
 export default Login;

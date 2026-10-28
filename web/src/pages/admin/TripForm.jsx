@@ -74,7 +74,7 @@ function Editor({ id, initial, routes, vehicles, token }) {
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="mb-6 text-2xl font-bold">{id ? 'แก้ไขรอบรถ' : 'เพิ่มรอบรถ'}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* แก้ไขเปลี่ยนเส้นทาง/คันรถไม่ได้ (คนจองไว้แล้วจะได้รถผิดคัน) ต้องยกเลิกรอบแล้วเพิ่มใหม่ */}
         <Field
           as="select"

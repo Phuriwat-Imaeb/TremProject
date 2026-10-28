@@ -38,7 +38,7 @@ function VehicleForm({ editing, token, onSaved, onCancel }) {
   }
 
   return (
-    <form onSubmit={submit} className="mb-6 space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <form onSubmit={submit} className="mb-6 space-y-3 rounded-md border border-gray-200 bg-white p-4">
       <h2 className="font-semibold">{editing ? `แก้คันรถ #${editing.id}` : 'เพิ่มคันรถ'}</h2>
       <div className="grid gap-3 sm:grid-cols-[1fr_10rem_8rem]">
         <Field label="ทะเบียนรถ" required maxLength={20} value={form.plate} onChange={set('plate')} />
@@ -120,7 +120,7 @@ function AdminVehicles() {
       {error && <Alert>{error.message}</Alert>}
       {data?.items.length === 0 && <EmptyState message="ยังไม่มีคันรถ" />}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
           {data.items.map((v) => (
             <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">

@@ -1,7 +1,6 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
-import { APP_NAME } from './config';
 import AdminArticles from './pages/admin/AdminArticles';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminMembers from './pages/admin/AdminMembers';
@@ -25,9 +24,9 @@ import Trips from './pages/Trips';
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-gray-900">
+    <div className="min-h-screen bg-canvas text-slate-900">
       <Navbar />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -93,12 +92,6 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-gray-500">
-          <p>{APP_NAME} · ระบบจองที่นั่งรถตู้และรถทัวร์</p>
-          <p>โครงงานวิชา 520341 / 520342 มหาวิทยาลัยศิลปากร</p>
-        </div>
-      </footer>
     </div>
   );
 }

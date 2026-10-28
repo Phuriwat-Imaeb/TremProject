@@ -34,13 +34,13 @@ function ArticleDetail() {
   return (
     <article className="space-y-4">
       {back}
-      {article.coverUrl && <img src={article.coverUrl} alt="" className="max-h-96 w-full rounded-3xl object-cover shadow-md" />}
-      <h1 className="text-2xl font-bold sm:text-4xl">{article.title}</h1>
+      {article.coverUrl && <img src={article.coverUrl} alt="" className="w-full rounded-md object-cover" />}
+      <h1 className="text-2xl font-bold">{article.title}</h1>
       <p className="text-sm text-gray-500">
         {article.author.displayName}
         {article.author.phone && ` · โทร ${article.author.phone}`} · {thaiDate(article.createdAt)}
       </p>
-      <p className="whitespace-pre-line rounded-2xl border border-gray-200 bg-white p-6 leading-relaxed shadow-sm">{article.body}</p>
+      <p className="whitespace-pre-line leading-relaxed">{article.body}</p>
     </article>
   );
 }

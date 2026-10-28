@@ -56,7 +56,7 @@ function AdminArticles() {
           <EmptyState message="ยังไม่มีบทความ">{newButton}</EmptyState>
         ))}
       {data?.items.length > 0 && (
-        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
           {data.items.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">

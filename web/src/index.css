@@ -1,3 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 bg-canvas font-sans text-slate-900 antialiased;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+  }
+}
