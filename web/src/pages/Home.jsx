@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
 import { ButtonLink } from '../components/Button';
+import { ArticleArt, RouteArt, VehicleArt } from '../components/CardArt';
 import Icon from '../components/Icon';
 import TripCard from '../components/TripCard';
 import TripFilterForm from '../components/TripFilterForm';
@@ -98,7 +99,10 @@ function Home() {
             </div>
           </div>
           <div className="relative mx-auto aspect-square w-full max-w-md rounded-[2rem] bg-brand-100">
-            <Icon name="bus" className="absolute inset-0 m-auto h-32 w-32 text-brand-300" strokeWidth={1.2} />
+            {/* ภาพอยู่ในกล่องชั้นใน ตัดขอบมนได้โดยไม่ตัดการ์ดตัวเลขที่ยื่นออกนอกกล่อง */}
+            <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
+              <VehicleArt className="absolute inset-x-0 bottom-0 h-auto w-full" />
+            </div>
             {trips.data && (
               <FloatStat icon="ticket" tone="bg-brand-100 text-brand-500" value={`${tripItems.length} รอบ`} label="เปิดขายตอนนี้" className="right-3 top-8 lg:-right-3" />
             )}
@@ -150,8 +154,8 @@ function Home() {
                     to={`/trips?routeId=${r.id}`}
                     className="block overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
                   >
-                    <div className={`grid h-28 place-items-center ${TINTS[i % TINTS.length]}`}>
-                      <Icon name="route" className="h-10 w-10 text-brand-300" strokeWidth={1.5} />
+                    <div className={`h-28 ${TINTS[i % TINTS.length]}`}>
+                      <RouteArt />
                     </div>
                     <div className="p-5">
                       <p className="font-bold">
@@ -183,8 +187,8 @@ function Home() {
                     {a.coverUrl ? (
                       <img src={a.coverUrl} alt="" className="h-36 w-full object-cover" />
                     ) : (
-                      <div className={`grid h-36 place-items-center ${TINTS[i % TINTS.length]}`}>
-                        <Icon name="fileText" className="h-10 w-10 text-brand-300" strokeWidth={1.5} />
+                      <div className={`h-36 ${TINTS[i % TINTS.length]}`}>
+                        <ArticleArt />
                       </div>
                     )}
                     <div className="p-5">

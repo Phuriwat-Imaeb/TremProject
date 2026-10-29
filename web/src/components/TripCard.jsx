@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { baht, thaiDay, thaiTime, VEHICLE_LABEL } from '../format';
 import Badge from './Badge';
+import { VehicleArt } from './CardArt';
 import Icon from './Icon';
 
 // พื้นสีอ่อนของรูปการ์ด วนตามลำดับ การ์ดที่อยู่ติดกันจะได้สีไม่ซ้ำกัน (เหมือนการ์ดประกาศในแบบ)
@@ -20,9 +21,9 @@ function TripCard({ trip, index = 0 }) {
         to={`/trips/${trip.id}`}
         className="group block h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
       >
-        <div className={`relative grid h-36 place-items-center ${TINTS[index % TINTS.length]}`}>
+        <div className={`relative h-36 overflow-hidden ${TINTS[index % TINTS.length]}`}>
+          <VehicleArt kind={trip.vehicle.kind} className="h-full w-full transition duration-300 group-hover:scale-105" />
           <span className="absolute left-3 top-3">{seatBadge(trip.seatsLeft)}</span>
-          <Icon name="bus" className="h-14 w-14 text-brand-300" strokeWidth={1.5} />
         </div>
         <div className="space-y-2 p-5">
           <p className="text-lg font-bold text-gray-900">

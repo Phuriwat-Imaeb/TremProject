@@ -3,8 +3,8 @@ import * as api from '../api/backend';
 import { useAuth } from '../auth/AuthContext';
 import Alert from '../components/Alert';
 import Badge from '../components/Badge';
+import { ArticleArt } from '../components/CardArt';
 import EmptyState from '../components/EmptyState';
-import Icon from '../components/Icon';
 import Loading from '../components/Loading';
 import PageHeader from '../components/PageHeader';
 import Pagination from '../components/Pagination';
@@ -17,12 +17,12 @@ export const thaiDate = (iso) => new Date(iso).toLocaleDateString('th-TH', { dat
 
 const TINTS = ['bg-tint-peach', 'bg-tint-mint', 'bg-tint-butter', 'bg-tint-sky'];
 
-// ภาพปกของบทความ ไม่มีรูปก็เป็นพื้นสีอ่อนกับไอคอน (เหมือนการ์ดในแบบ)
+// ภาพปกของบทความ ไม่มีรูปก็ใช้ภาพประกอบบนพื้นสีอ่อน
 function Cover({ article, index, className }) {
   if (article.coverUrl) return <img src={article.coverUrl} alt="" className={`w-full object-cover ${className}`} />;
   return (
-    <div className={`grid place-items-center ${TINTS[index % TINTS.length]} ${className}`}>
-      <Icon name="fileText" className="h-12 w-12 text-brand-300" strokeWidth={1.5} />
+    <div className={`${TINTS[index % TINTS.length]} ${className}`}>
+      <ArticleArt />
     </div>
   );
 }
