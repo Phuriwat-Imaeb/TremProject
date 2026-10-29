@@ -51,12 +51,13 @@ npm start          # เปิด http://localhost:3000
 
 ## Deploy
 
-ฐานข้อมูลบน [Neon](https://neon.tech), API บน [Render](https://render.com), หน้าเว็บบน [Vercel](https://vercel.com) ทั้งหมดใช้แบบฟรีได้
+ฐานข้อมูลบน [Supabase](https://supabase.com), API บน [Render](https://render.com), หน้าเว็บบน [Vercel](https://vercel.com) ทั้งหมดใช้แบบฟรีได้
 
-1. **Neon**: สร้าง project (region Singapore) แล้วคัดลอก connection string (ขึ้นต้น `postgresql://...` และมี `?sslmode=require`)
+1. **Supabase**: สร้าง project (region ใกล้ Render เช่น Singapore หรือ Tokyo) กด Connect แล้วคัดลอก connection string แบบ **Session pooler** (port 5432) ใส่รหัสผ่านแทน `[YOUR-PASSWORD]` และต่อท้ายด้วย `?sslmode=require`
+   (ไม่ใช้ Direct connection เพราะแบบฟรีต่อได้แค่ IPv6 ซึ่ง Render ต่อไม่ได้ และไม่ใช้ Transaction pooler port 6543 เพราะ pgx ใช้ prepared statement)
    เปิด SQL Editor วางเนื้อหา `db/schema.sql` กด Run แล้วทำแบบเดียวกันกับ `db/seed.sql`
 2. **Render**: New → Blueprint → เลือก repo นี้ จะอ่าน [render.yaml](render.yaml) แล้วถามค่า
-   - `DATABASE_URL` = connection string จาก Neon
+   - `DATABASE_URL` = connection string จาก Supabase
    - `ALLOWED_ORIGINS` = ใส่อะไรก็ได้ไปก่อน (เช่น `http://localhost:3000`) ได้ URL ของ Vercel แล้วค่อยมาแก้
    - `JWT_SECRET` Render สุ่มให้เอง
 
@@ -68,6 +69,7 @@ npm start          # เปิด http://localhost:3000
 
 หลังจากนี้ push ขึ้น `main` ทั้ง Render และ Vercel จะ deploy ใหม่ให้เอง
 แบบฟรีของ Render จะหลับเมื่อไม่มีคนเรียก 15 นาที คำขอแรกหลังจากนั้นจะช้าราวครึ่งนาที
+แบบฟรีของ Supabase จะพัก project ที่ไม่มีคนใช้ 7 วัน ต้องเข้าไปกด Restore ในหน้า Supabase ก่อน
 
 ## เทสต์
 

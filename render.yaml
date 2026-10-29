@@ -1,5 +1,5 @@
 # พิมพ์เขียวสำหรับ Render (New → Blueprint → เลือก repo นี้) สร้าง API ให้ตามนี้
-# ฐานข้อมูลอยู่ที่ Neon (ฟรีไม่หมดอายุ) ไม่ได้อยู่บน Render
+# ฐานข้อมูลอยู่ที่ Supabase ไม่ได้อยู่บน Render
 services:
   - type: web
     name: tremproject-api
