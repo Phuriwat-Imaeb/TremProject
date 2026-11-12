@@ -6,7 +6,7 @@ import { ArticleArt, RouteArt, VehicleArt } from '../components/CardArt';
 import Icon from '../components/Icon';
 import TripCard from '../components/TripCard';
 import TripFilterForm from '../components/TripFilterForm';
-import { todayInThai } from '../format';
+import { lastBookableDateInThai, todayInThai } from '../format';
 import useApi from '../hooks/useApi';
 import usePageTitle from '../hooks/usePageTitle';
 
@@ -95,7 +95,7 @@ function Home() {
               </ButtonLink>
             </div>
             <div className="mt-8 [&>form]:mb-0 [&>form]:shadow-sm">
-              <TripFilterForm routes={routeItems} routeId="" date="" minDate={todayInThai()} onSearch={search} />
+              <TripFilterForm routes={routeItems} routeId="" date="" minDate={todayInThai()} maxDate={lastBookableDateInThai()} onSearch={search} />
             </div>
           </div>
           <div className="relative mx-auto aspect-square w-full max-w-md rounded-[2rem] bg-brand-100">

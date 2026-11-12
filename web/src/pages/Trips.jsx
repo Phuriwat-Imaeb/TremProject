@@ -8,7 +8,7 @@ import Loading from '../components/Loading';
 import PageHeader from '../components/PageHeader';
 import TripCard from '../components/TripCard';
 import TripFilterForm from '../components/TripFilterForm';
-import { todayInThai } from '../format';
+import { lastBookableDateInThai, todayInThai } from '../format';
 import useApi from '../hooks/useApi';
 import usePageTitle from '../hooks/usePageTitle';
 
@@ -51,6 +51,7 @@ function Trips() {
           routeId={routeId}
           date={date}
           minDate={todayInThai()}
+          maxDate={lastBookableDateInThai()}
           onSearch={search}
         />
         <div className="min-w-0 space-y-5">

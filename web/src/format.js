@@ -16,6 +16,11 @@ export const baht = (n) => `${n.toLocaleString('th-TH')} บาท`;
 // วันนี้ตามเวลาไทยแบบ YYYY-MM-DD (en-CA เรียงปี-เดือน-วันพอดี) ไว้เป็นค่า min ของช่องเลือกวัน
 export const todayInThai = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
 
+// server สร้างรอบรถตามตารางประจำวันไว้ล่วงหน้า 60 วัน (ดู store/timetable.go) ช่องวันที่จึงให้เลือกได้ไกลสุดเท่านั้น
+export const BOOKING_WINDOW_DAYS = 60;
+export const lastBookableDateInThai = () =>
+  new Date(Date.now() + BOOKING_WINDOW_DAYS * 86400000).toLocaleDateString('en-CA', { timeZone: TZ });
+
 export const VEHICLE_LABEL = { van: 'รถตู้', bus: 'รถทัวร์' };
 
 // ช่อง <input type="datetime-local"> ใช้ค่า "YYYY-MM-DDTHH:mm" ไม่มีเขตเวลา ระบบนี้ถือว่าเป็นเวลาไทยเสมอ

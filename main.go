@@ -41,9 +41,14 @@ func main() {
 	// หน้าเว็บ React จาก origin ไหนเรียก API ได้ คั่นด้วยจุลภาค เช่น http://localhost:3000
 	origins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 
+	st := &store.Store{Pool: pool}
+	// สร้างรอบรถตามตารางประจำวันล่วงหน้า 60 วัน ตอนเปิดเซิร์ฟเวอร์ และเติมซ้ำทุก 6 ชั่วโมง
+	// ข้อมูลตัวอย่างจึงไม่หมดอายุ เลือกวันเดินทางวันไหนก็มีรอบให้จอง
+	go st.KeepTimetableFilled(context.Background(), 60, 6*time.Hour, log.Printf)
+
 	tickets := &auth.Issuer{Secret: []byte(secret), TTL: time.Hour}
 	h := &handler.Handler{
-		Store:     &store.Store{Pool: pool},
+		Store:     st,
 		Tickets:   tickets,
 		Live:      live.NewHub(),
 		WSOrigins: wsHosts(origins),

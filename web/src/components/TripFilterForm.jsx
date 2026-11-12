@@ -8,7 +8,7 @@ import Icon from './Icon';
 // คนเรียกควรใส่ key ที่เปลี่ยนตาม URL กด back แล้วฟอร์มจะเปลี่ยนตาม
 // minDate: หน้าบ้านห้ามเลือกวันที่ผ่านมาแล้ว หลังบ้านไม่ใส่ จะได้ย้อนดูรอบเก่าได้
 // stacked: เรียงช่องลงมาเป็นกล่อง "ตัวกรอง" ด้านข้าง (หน้าค้นหา) ไม่ใส่ = เรียงเป็นแถวเดียว
-function TripFilterForm({ routes, routeId, date, minDate, onSearch, stacked = false }) {
+function TripFilterForm({ routes, routeId, date, minDate, maxDate, onSearch, stacked = false }) {
   const [form, setForm] = useState({ routeId, date });
   const set = (name) => (e) => setForm((f) => ({ ...f, [name]: e.target.value }));
 
@@ -32,7 +32,7 @@ function TripFilterForm({ routes, routeId, date, minDate, onSearch, stacked = fa
           </option>
         ))}
       </Field>
-      <Field type="date" label="วันเดินทาง" min={minDate} value={form.date} onChange={set('date')} />
+      <Field type="date" label="วันเดินทาง" min={minDate} max={maxDate} value={form.date} onChange={set('date')} />
     </>
   );
 
